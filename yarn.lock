@@ -2797,6 +2797,13 @@ caniuse-lite@^1.0.0, caniuse-lite@^1.0.30000981, caniuse-lite@^1.0.30001020, can
   resolved "https://registry.yarnpkg.com/caniuse-lite/-/caniuse-lite-1.0.30001035.tgz#2bb53b8aa4716b2ed08e088d4dc816a5fe089a1e"
   integrity sha512-C1ZxgkuA4/bUEdMbU5WrGY4+UhMFFiXrgNAfxiMIqWgFTWfv/xsZCS2xEHT2LMq7xAZfuAnu6mcqyDl0ZR6wLQ==
 
+canvas@1.3.x:
+  version "1.3.16"
+  resolved "https://registry.yarnpkg.com/canvas/-/canvas-1.3.16.tgz#7ebde8c54d098fb59b9b598f94c908f6e939147d"
+  integrity sha1-fr3oxU0Jj7Wbm1mPlMkI9uk5FH0=
+  dependencies:
+    nan "^2.3.2"
+
 capture-exit@^2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/capture-exit/-/capture-exit-2.0.0.tgz#fb953bfaebeb781f62898239dabb426d08a509a4"
@@ -6332,6 +6339,22 @@ jsx-ast-utils@^2.2.1, jsx-ast-utils@^2.2.3:
     array-includes "^3.0.3"
     object.assign "^4.1.0"
 
+jsxgraph-react-js@^1.0.4:
+  version "1.0.4"
+  resolved "https://registry.yarnpkg.com/jsxgraph-react-js/-/jsxgraph-react-js-1.0.4.tgz#b7855ac314297fc8c7abfb37be85a9b0eaf98326"
+  integrity sha512-n+FBnEMwwCaywp7ROn49JwZJv8TFy7nQbXnk/LKlnS2Z7OLGOLrZjBbHwZg/pPCqTp1zqMBC7hg7LFlZXF076w==
+  dependencies:
+    jsxgraph "^0.99.7"
+
+jsxgraph@^0.99.7:
+  version "0.99.7"
+  resolved "https://registry.yarnpkg.com/jsxgraph/-/jsxgraph-0.99.7.tgz#57e4acef275e9376e92bdd6672834d97654de256"
+  integrity sha1-V+Ss7ydek3bpK91mcoNNl2VN4lY=
+  dependencies:
+    requirejs "2.3.x"
+  optionalDependencies:
+    canvas "1.3.x"
+
 killable@^1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/killable/-/killable-1.0.1.tgz#4c8ce441187a061c7474fb87ca08e2a638194892"
@@ -6914,6 +6937,11 @@ nan@^2.12.1:
   version "2.14.0"
   resolved "https://registry.yarnpkg.com/nan/-/nan-2.14.0.tgz#7818f722027b2459a86f0295d434d1fc2336c52c"
   integrity sha512-INOFj37C7k3AfaNTtX8RhsTw7qRy7eLET14cROi9+5HAVbbHuIWUHEauBv5qT4Av2tWasiTY1Jw6puUNqRJXQg==
+
+nan@^2.3.2:
+  version "2.14.2"
+  resolved "https://registry.yarnpkg.com/nan/-/nan-2.14.2.tgz#f5376400695168f4cc694ac9393d0c9585eeea19"
+  integrity sha512-M2ufzIiINKCuDfBSAUr1vWQ+vuVcA9kqx8JJUsbQi6yf1uGRyb7HfpdfUr5qLXf3B/t8dPvcjhKMmlfnP47EzQ==
 
 nanomatch@^1.2.9:
   version "1.2.13"
@@ -8949,6 +8977,11 @@ require-main-filename@^2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/require-main-filename/-/require-main-filename-2.0.0.tgz#d0b329ecc7cc0f61649f62215be69af54aa8989b"
   integrity sha512-NKN5kMDylKuldxYLSUfrbo5Tuzh4hd+2E8NPPX02mZtn1VuREQToYe/ZdlJy+J3uCpfaiGF05e7B8W0iXbQHmg==
+
+requirejs@2.3.x:
+  version "2.3.6"
+  resolved "https://registry.yarnpkg.com/requirejs/-/requirejs-2.3.6.tgz#e5093d9601c2829251258c0b9445d4d19fa9e7c9"
+  integrity sha512-ipEzlWQe6RK3jkzikgCupiTbTvm4S0/CAU5GlgptkN5SO6F3u0UD0K18wy6ErDqiCyP4J4YYe1HuAShvsxePLg==
 
 requires-port@^1.0.0:
   version "1.0.0"
