@@ -1,33 +1,46 @@
 import React from 'react';
-import logo from './logo.svg';
+import { useState } from 'react';
+import { TreeView } from './views/tree';
+import { CreasesView } from './views/creases';
+import { PackingView } from './views/packing';
+import Row from 'react-bootstrap/Row';
+import Nav from 'react-bootstrap/Nav';
+import Navbar from 'react-bootstrap/Navbar';
+import Container from 'react-bootstrap/Container';
 import './App.css';
-import JXGBoard from 'jsxgraph-react-js';
+import 'bootstrap/dist/css/bootstrap.min.css';
 
-// copied from example
-const logicJS = (brd: any) => {
-  brd.suspendUpdate();
-  var a = brd.create('slider', [[2, 8], [6, 8], [0, 3, 6]], { name: 'a' });
-  var b = brd.create('slider', [[2, 7], [6, 7], [0, 2, 6]], { name: 'b' });
-  var A = brd.create('slider', [[2, 6], [6, 6], [0, 3, 6]], { name: 'A' });
-  var B = brd.create('slider', [[2, 5], [6, 5], [0, 3, 6]], { name: 'B' });
-  var delta = brd.create('slider', [[2, 4], [6, 4], [0, 0, Math.PI]], { name: '&delta;' });
-
-  var c = brd.create('curve', [
-    function (t: number) { return A.Value() * Math.sin(a.Value() * t + delta.Value()); },
-    function (t: number) { return B.Value() * Math.sin(b.Value() * t); },
-    0, 2 * Math.PI], { strokeColor: '#aa2233', strokeWidth: 3 });
-  brd.unsuspendUpdate();
-}
-
+enum View { Tree, Creases, Packing };
 
 function App() {
+  const [view, setView] = useState(View['Tree']);
   return (
-    <JXGBoard
-      logic={logicJS}
-      boardAttributes={{ axis: true, boundingbox: [-12, 10, 12, -10] }}
-      style={{ border: "3px solid red" }}
-    />
+    <Container fluid>
+      <Row>
+        <Navbar fixed="top">
+          <Navbar.Brand href="#home">TreeMaker</Navbar.Brand>
+          <Navbar.Toggle aria-controls="responsive-navbar-nav" />
+          <Navbar.Collapse id="responsive-navbar-naReact-Bootstrap<v">
+            <Nav className="mr-auto">
+              <Nav.Link href="#" onClick={() => setView(View['Tree'])}>Tree</Nav.Link>
+              <Nav.Link href="#" onClick={() =>setView(View['Packing'])}>Packing</Nav.Link>
+              <Nav.Link href="#" onClick={() => setView(View['Creases'])}>Creases</Nav.Link>
+            </Nav>
+          </Navbar.Collapse>
+        </Navbar>
+      </Row>
+      <Row>
+        <div className="view">
+          { view === View['Tree'] && <TreeView /> }
+          { view === View['Creases'] && <CreasesView /> }
+          { view === View['Packing'] && <PackingView /> }
+        </div>
+      </Row>
+    </Container>
   );
 }
+
+/*
+*/
 
 export default App;
