@@ -1,0 +1,44 @@
+body {
+  background-color: #ffeedd;
+}
+
+.logo {
+  width: 10%;
+}
+
+table {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.spacer {
+  width: 5%;
+}
+
+.viewBoxTd {
+  width: 30%;
+}
+
+.viewBox {
+  height: 0;
+  width: 100%;
+  position: relative;
+  padding: 0;
+  padding-bottom: 100%;
+  outline-style: solid;
+  background-color: #eeffee;
+}
+
+.threeButtons td {
+  padding-top: 20px;
+  text-align: center;
+}
+
+button {
+  font-size: 20pt;
+}
+
+.threeInstructions td {
+  padding: 0px 10px;
+  vertical-align: top;
+}
