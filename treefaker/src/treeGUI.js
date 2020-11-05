@@ -118,7 +118,6 @@ function createLine(point1, point2) {
   edgeLengthLabelOf.set(newLine, newLineEdgeLengthLabel);
   newLine.on("up", function(e) {if (e.shiftKey) deleteSubtree(point1, point2)});
   newLine.on("down", function(e) {if (e.which == 3) changeEdgeLength(point1, point2)});
-  newLineEdgeLengthLabel.on("down", function(e) {if (e.which == 3) changeEdgeLength(point1, point2)});
   return newLine;
 }
 
