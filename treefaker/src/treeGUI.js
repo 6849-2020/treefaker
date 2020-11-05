@@ -3,12 +3,12 @@ treeBoard = JXG.JSXGraph.initBoard('treeViewBox', {
   showCopyright: false
 });
 packingBoard = JXG.JSXGraph.initBoard('packingViewBox', {
-  boundingbox: [0, 1, 1, 0],
+  boundingbox: [-.05, 1.05, 1.05, -.05],
   showCopyright: false,
   showNavigation: false
 });
 creasesBoard = JXG.JSXGraph.initBoard('creasesViewBox', {
-  boundingbox: [0, 1, 1, 0],
+  boundingbox: [-.05, 1.05, 1.05, -.05],
   showCopyright: false,
   showNavigation: false
 });
@@ -117,7 +117,8 @@ function createLine(point1, point2) {
   treePoints.get(point2).add(newLine);
   edgeLengthLabelOf.set(newLine, newLineEdgeLengthLabel);
   newLine.on("up", function(e) {if (e.shiftKey) deleteSubtree(point1, point2)});
-  newLineEdgeLengthLabel.on("down", function(e) {changeEdgeLength(point1, point2)});
+  newLine.on("down", function(e) {if (e.which == 3) changeEdgeLength(point1, point2)});
+  newLineEdgeLengthLabel.on("down", function(e) {if (e.which == 3) changeEdgeLength(point1, point2)});
   return newLine;
 }
 

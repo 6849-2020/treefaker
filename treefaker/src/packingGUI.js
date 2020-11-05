@@ -3,13 +3,13 @@ diskPacking = null; // Map from tree point ids to locations on [0, 1] X [0, 1].
 function showDiskPacking() {
   JXG.JSXGraph.freeBoard(packingBoard);
   packingBoard = JXG.JSXGraph.initBoard('packingViewBox', {
-    boundingbox: [0, 1, 1, 0],
+    boundingbox: [-.05, 1.05, 1.05, -.05],
     showCopyright: false,
     showNavigation: false
   });
+  packingBoard.create('grid', []);
   for (vertexId of Object.keys(diskPacking)) {
     packingBoard.create('point', diskPacking[vertexId], {name: vertexId, fixed: true});
-    // TODO Make sure labels don't go off screen.
     // TODO Maybe we can color-code the points to match with the treeView?
   }
 }
