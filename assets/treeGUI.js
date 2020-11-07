@@ -1,18 +1,3 @@
-treeBoard = JXG.JSXGraph.initBoard('treeViewBox', {
-  boundingbox: [0, 10, 10, 0],
-  showCopyright: false
-});
-packingBoard = JXG.JSXGraph.initBoard('packingViewBox', {
-  boundingbox: [-.05, 1.05, 1.05, -.05],
-  showCopyright: false,
-  showNavigation: false
-});
-creasesBoard = JXG.JSXGraph.initBoard('creasesViewBox', {
-  boundingbox: [-.05, 1.05, 1.05, -.05],
-  showCopyright: false,
-  showNavigation: false
-});
-
 readyToCreateNewPoint = true; // Lock to make sure we don't try to create several new points in one ctrl press.
 pointIdsInUse = new Set(); // A set of all labels currently in use.
 nextPointId = 1; // The least positive integer not in pointIdsInUse.
