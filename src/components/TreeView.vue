@@ -8,21 +8,21 @@ import { JSXGraph, Board, COORDS_BY_USER } from "jsxgraph";
 
 @Component
 export default class TreeView extends Vue {
+  readyToCreateNewPoint: boolean;
   pointIdsInUse: Set<number>; // A set of all labels currently in use.
   nextPointId: number; // The least positive integer not in pointIdsInUse.
-  treePoints: WeakMap<any, any>; // Map from all points to set of incident lines.
-  treePointsSet: Set<any>; // Set of all points.
-  edgeLengthLabelOf: WeakMap<any, any>; // Map from each line to its edge length label.
+  treePoints: Map<any, any>; // Map from all points to set of incident lines.
+  edgeLengthLabelOf: Map<any, any>; // Map from each line to its edge length label.
   treeBoard: Board | null;
 
   constructor() {
     super();
+    this.readyToCreateNewPoint = true; // Lock to make sure we don't try to create several new points in one ctrl press.
     this.pointIdsInUse = new Set();
     this.nextPointId = 1;
-    this.treePointsSet = new Set();
-    this.edgeLengthLabelOf = new WeakMap();
-    this.treePoints = new WeakMap();
-    this.edgeLengthLabelOf = new WeakMap();
+    this.edgeLengthLabelOf = new Map();
+    this.treePoints = new Map();
+    this.edgeLengthLabelOf = new Map();
     this.treeBoard = null;
   }
 
@@ -36,8 +36,6 @@ export default class TreeView extends Vue {
     const initialPoint2 = this.createPoint(5, 6);
     this.treePoints.set(initialPoint1, new Set());
     this.treePoints.set(initialPoint2, new Set());
-    this.treePointsSet.add(initialPoint1);
-    this.treePointsSet.add(initialPoint2);
     this.createLine(initialPoint1, initialPoint2);
   }
 
@@ -134,7 +132,6 @@ export default class TreeView extends Vue {
       this.pointIdsInUse.delete(point.name);
       this.treeBoard.removeObject(point);
       this.treePoints.delete(point);
-      this.treePointsSet.delete(point);
     }
     this.nextPointId = 1;
     while (this.pointIdsInUse.has(this.nextPointId)) {
@@ -161,10 +158,10 @@ export default class TreeView extends Vue {
     this.treePoints.get(point1).add(newLine);
     this.treePoints.get(point2).add(newLine);
     this.edgeLengthLabelOf.set(newLine, newLineEdgeLengthLabel);
-    newLine.on("up", function(e) {
+    newLine.on("up", function(this: TreeView, e) {
       if (e.shiftKey) this.deleteSubtree(point1, point2);
     }.bind(this));
-    newLine.on("down", function(e) {
+    newLine.on("down", function(this: TreeView, e) {
       if (e.which === 3) this.changeEdgeLength(point1, point2);
     }.bind(this));
     return newLine;
@@ -175,21 +172,18 @@ export default class TreeView extends Vue {
     const point = this.treeBoard.create("point", [x, y], {
       name: this.nextPointId
     });
-    point.on("up", function(e: any) {
+    point.on("up", function(this: TreeView, e: any) {
       this.readyToCreateNewPoint = true;
     }.bind(this));
-    point.on("down", function(e: any) {
-      console.log('ctrl key: ', e.ctrlKey);
-      console.log('ready: ', this.readyToCreateNewPoint);
+    point.on("down", function(this: TreeView, e: any) {
       if (e.ctrlKey && this.readyToCreateNewPoint) {
-        console.log('adding new point');
         this.readyToCreateNewPoint = false;
         const newPoint = this.createPoint(point.X(), point.Y());
         this.treePoints.set(newPoint, new Set());
-        this.treePointsSet.add(newPoint);
 
         // Redraw lines to new point.
-        for (const incidentLine of new Set(this.treePoints.get(point))) {
+        const incidentLines : Set<any> = new Set(this.treePoints.get(point));
+        for (const incidentLine of incidentLines) {
           let otherPoint = null;
           if (incidentLine.point1 === point) {
             otherPoint = incidentLine.point2;
