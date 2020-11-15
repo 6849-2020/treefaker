@@ -1,8 +1,9 @@
 // TODO: univeral molecule.
-import { PackingGraph, PackingNode, PackingEdge, CreasesGraph, CreasesNode, CreasesEdge }  from "../packing";
+import { Node, Edge, Face, TreeNode, PackingNode, Packing, CreasesNode, CreaseType, MVAssignment, Crease, Graph, TreeGraph, CreasesGraphState, CreasesGraph }  from "../packing";
 
-function cleanPacking(graph: PackingGraph): CreasesGraph {
+function cleanPacking(p): CreasesGraph {
     // TODO
+    throw {name : "NotImplementedError", message : "Function cleanPacking() not yet implemented."};
 }
 
 function generateMolecules(graph: CreasesGraph): any {
