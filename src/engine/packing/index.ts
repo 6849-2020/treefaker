@@ -1,5 +1,7 @@
 import { matrix, math } from "mathjs";
 
+const TOLERANCE = 0.000001;
+
 class Node {
   readonly id: string;
   readonly x: number;
@@ -12,6 +14,26 @@ class Node {
     this.x = x;
     this.y = y;
     this.edges = [];
+  }
+  
+  counterclockwise(e: Edge) {
+    const index = this.edges.indexOf(e);
+    if (index == -1) {
+      throw new Error(`Edge ${e.from.id} -> ${e.to.id} not adjacent to vertex ${this.id}.`);
+    } else {
+      const numEdges = this.edges.length;
+      return this.edges[(index + 1) % numEdges]
+    }
+  }
+  
+  clockwise(e: Edge) {
+    const index = this.edges.indexOf(e);
+    if (index == -1) {
+      throw new Error(`Edge ${e.from.id} -> ${e.to.id} not adjacent to vertex ${this.id}.`);
+    } else {
+      const numEdges = this.edges.length;
+      return this.edges[(index - 1 + numEdges) % numEdges]
+    }
   }
 }
 
@@ -78,7 +100,7 @@ class Packing {
 }
 
 class CreasesNode extends PackingNode {
-  faces : Face[];
+  faces: Face[];
   
   constructor(id: string, x: number, y: number) {
     super(id, x, y);
@@ -92,7 +114,8 @@ enum CreaseType {
   Ridge,
   Hinge,
   Pseudohinge,
-  Boundary
+  ActiveHull,
+  InactiveHull
 }
 
 enum MVAssignment {
@@ -106,15 +129,15 @@ enum MVAssignment {
 class Crease extends Edge {
   leftFace: Face | null;
   rightFace: Face | null;
-  creaseType : CreaseType;
-  assignment : MVAssignment;
+  creaseType: CreaseType;
+  assignment: MVAssignment;
   
   constructor(to: CreasesNode, from: CreasesNode, creaseType : CreaseType) {
     super(to, from);
     this.leftFace = null;
     this.rightFace = null;
     this.creaseType = creaseType;
-    if (creaseType == CreaseType.Boundary) {
+    if (creaseType == CreaseType.ActiveHull || creaseType == CreaseType.InactiveHull) {
       this.assignment = MVAssignment.Boundary
     } else if (creaseType == CreaseType.Gusset) {
       this.assignment = MVAssignment.Valley
@@ -128,16 +151,16 @@ class Crease extends Edge {
   }
 }
 
-class Graph {
-  nodes: Map<string, Node>;
-  edges: Set<Edge>;
+class Graph<N extends Node, E extends Edge> {
+  nodes: Map<string, N>;
+  edges: Set<E>;
 
   constructor() {
     this.nodes = new Map();
     this.edges = new Set();
   }
 
-  addNode(n: Node) {
+  addNode(n: N) {
     if (this.nodes.has(n.id)) {
       throw new Error(`Node with ID ${n.id} already exists.`);
     } else {
@@ -145,8 +168,7 @@ class Graph {
     }
   }
 
-  addEdge(to : Node, from : Node) {
-    const e = new Edge(to, from);
+  addEdge(e: E) {
     if (!this.nodes.has(e.from.id)) {
       throw new Error(`Cannot add an edge from nonexistent node ${e.from.id}.`);
     }
@@ -155,13 +177,13 @@ class Graph {
     }
     const fromAngle = Math.atan2(e.to.y - e.from.y, e.to.x - e.from.x);
     const toAngle = Math.atan2(e.from.y - e.to.y, e.from.x - e.to.x);
-    var i = e.from.edges.length - 1;
+    let i = e.from.edges.length - 1;
     for (; i >= 0; i--) {
       const otherEdge = e.from.edges[i]
       const otherNode = otherEdge.getOtherNode(e.from);
       const otherEdgeAngle = Math.atan2(otherNode.y - e.from.y, otherNode.x - e.from.x);
       const angleDifference = fromAngle - otherEdgeAngle;
-      if (Math.abs(angleDifference) < 0.000001) {
+      if (Math.abs(angleDifference) < TOLERANCE) {
         throw new Error(`Tried to add edge parallel to existing incident edge.`);
       } else if (angleDifference > 0) {
         break;
@@ -175,7 +197,7 @@ class Graph {
       const otherNode = otherEdge.getOtherNode(e.to);
       const otherEdgeAngle = Math.atan2(otherNode.y - e.to.y, otherNode.x - e.to.x);
       const angleDifference = toAngle - otherEdgeAngle;
-      if (Math.abs(angleDifference) < 0.000001) {
+      if (Math.abs(angleDifference) < TOLERANCE) {
         throw new Error(`Tried to add edge parallel to existing incident edge.`);
       } else if (angleDifference > 0) {
         break;
@@ -184,17 +206,37 @@ class Graph {
     }
     e.to.edges[i + 1] = e;
     this.edges.add(e);
-    return e;
   }
 }
 
-class TreeGraph extends Graph {
-  shortestPath(from: TreeNode, to: TreeNode) {}
+class TreeGraph extends Graph<TreeNode, TreeEdge> {
+  //shortestPath(from: TreeNode, to: TreeNode) {}
 
-  pack(): Packing{
-    // TODO(Parker)
-    // Build shortest-path distance matrix l_{ij}.
-    throw new Error("Function pack() not yet implemented.");
+  // Returns d such that, for all leaf nodes a and b, d.get(a).get(b).get(c) is the tree distance from a to c on the path to b.
+  getDistances(): Map<string, Map<string, Map<string, number>>> {
+    const d = new Map();
+    for (const fromNodeId of this.nodes.keys()) {
+      const fromNode = this.nodes.get(fromNodeId) as TreeNode;
+      const distancesTo = new Map();
+      this.getDistancesRecursive(distancesTo, 0, new Map(), fromNode, fromNode.edges[0] as TreeEdge);
+      d.set(fromNodeId, distancesTo);
+    }
+    return d;
+  }
+  
+  getDistancesRecursive(distancesTo: Map<string, Map<string, number>>, distanceSoFar: number, distancesAlongPath: Map<string, number>, fromNode: TreeNode, e: TreeEdge) {
+    distanceSoFar += e.length;
+    const toNode = e.getOtherNode(fromNode);
+    distancesAlongPath.set(toNode.id, distanceSoFar);
+    if (toNode.edges.length == 1) {
+      distancesTo.set(toNode.id, distancesAlongPath);
+    } else {
+      for (const ePrime of toNode.edges) {
+        if (ePrime.getOtherNode(toNode) != fromNode) {
+          this.getDistancesRecursive(distancesTo, distanceSoFar, new Map(distancesAlongPath), toNode, ePrime as TreeEdge);
+        }
+      }
+    }
   }
 }
 
@@ -205,13 +247,28 @@ enum CreasesGraphState {
   FullyAssigned
 }
 
-class CreasesGraph extends Graph {
-  state : CreasesGraphState;
+class CreasesGraph extends Graph<CreasesNode, Crease> {
+  state: CreasesGraphState;
+  leafExtensions: Map<CreasesNode, number>;
+  faces: Set<Face>;
   
-  constructor() {
+  constructor(p: Packing) {
     super();
     this.state = CreasesGraphState.NewlyCreated;
+    this.leafExtensions = new Map();
+    this.faces = new Set();
+    for (const nodeId of p.nodes.keys()) {
+      const packingNode = p.nodes.get(nodeId) as PackingNode;
+      const creasesNode = new CreasesNode(nodeId, packingNode.x, packingNode.y);
+      this.addNode(creasesNode);
+      this.leafExtensions.set(creasesNode, 0);
+    }
   }
+}
+
+export function pack(d: Map<string, Map<string, Map<string, number>>>): Packing {
+  // TODO(Parker)
+  throw new Error("Function pack() not yet implemented.");
 }
 
 export function testOpt() {
@@ -223,11 +280,14 @@ export function testOpt() {
 }
 
 // TODO(Parker) optimization stuff.
+
 export {
+  TOLERANCE,
   Node,
   Edge,
   Face,
   TreeNode,
+  TreeEdge,
   PackingNode,
   Packing,
   CreasesNode,
