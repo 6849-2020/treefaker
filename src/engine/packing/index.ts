@@ -15,24 +15,28 @@ class Node {
     this.y = y;
     this.edges = [];
   }
-  
+
   counterclockwise(e: Edge) {
     const index = this.edges.indexOf(e);
     if (index == -1) {
-      throw new Error(`Edge ${e.from.id} -> ${e.to.id} not adjacent to vertex ${this.id}.`);
+      throw new Error(
+        `Edge ${e.from.id} -> ${e.to.id} not adjacent to vertex ${this.id}.`
+      );
     } else {
       const numEdges = this.edges.length;
-      return this.edges[(index + 1) % numEdges]
+      return this.edges[(index + 1) % numEdges];
     }
   }
-  
+
   clockwise(e: Edge) {
     const index = this.edges.indexOf(e);
     if (index == -1) {
-      throw new Error(`Edge ${e.from.id} -> ${e.to.id} not adjacent to vertex ${this.id}.`);
+      throw new Error(
+        `Edge ${e.from.id} -> ${e.to.id} not adjacent to vertex ${this.id}.`
+      );
     } else {
       const numEdges = this.edges.length;
-      return this.edges[(index - 1 + numEdges) % numEdges]
+      return this.edges[(index - 1 + numEdges) % numEdges];
     }
   }
 }
@@ -41,31 +45,30 @@ class Edge {
   readonly to: Node;
   readonly from: Node;
   [key: string]: any;
-  
+
   constructor(to: Node, from: Node) {
     this.to = to;
     this.from = from;
   }
-  
-  getOtherNode(n : Node) {
+
+  getOtherNode(n: Node) {
     if (n == this.to) {
       return this.from;
     } else if (n == this.from) {
       return this.to;
-    }
-    else {
+    } else {
       throw new Error("Node not in edge.");
     }
   }
 }
 
 class Face {
-  readonly isOuterFace : boolean;
-  nodes : Node[]
-  edges : Edge[]
+  readonly isOuterFace: boolean;
+  nodes: Node[];
+  edges: Edge[];
   [key: string]: any;
-  
-  constructor(isOuterFace : boolean) {
+
+  constructor(isOuterFace: boolean) {
     this.isOuterFace = isOuterFace;
     this.nodes = [];
     this.edges = [];
@@ -101,7 +104,7 @@ class Packing {
 
 class CreasesNode extends PackingNode {
   faces: Face[];
-  
+
   constructor(id: string, x: number, y: number) {
     super(id, x, y);
     this.faces = [];
@@ -115,7 +118,7 @@ enum CreaseType {
   Hinge,
   Pseudohinge,
   ActiveHull,
-  InactiveHull
+  InactiveHull,
 }
 
 enum MVAssignment {
@@ -123,7 +126,7 @@ enum MVAssignment {
   Valley,
   Tristate,
   Unknown,
-  Boundary
+  Boundary,
 }
 
 class Crease extends Edge {
@@ -131,22 +134,28 @@ class Crease extends Edge {
   rightFace: Face | null;
   creaseType: CreaseType;
   assignment: MVAssignment;
-  
-  constructor(to: CreasesNode, from: CreasesNode, creaseType : CreaseType) {
+
+  constructor(to: CreasesNode, from: CreasesNode, creaseType: CreaseType) {
     super(to, from);
     this.leftFace = null;
     this.rightFace = null;
     this.creaseType = creaseType;
-    if (creaseType == CreaseType.ActiveHull || creaseType == CreaseType.InactiveHull) {
-      this.assignment = MVAssignment.Boundary
+    if (
+      creaseType == CreaseType.ActiveHull ||
+      creaseType == CreaseType.InactiveHull
+    ) {
+      this.assignment = MVAssignment.Boundary;
     } else if (creaseType == CreaseType.Gusset) {
-      this.assignment = MVAssignment.Valley
-    } else if (creaseType == CreaseType.Ridge || creaseType == CreaseType.Pseudohinge) {
-      this.assignment = MVAssignment.Mountain
+      this.assignment = MVAssignment.Valley;
+    } else if (
+      creaseType == CreaseType.Ridge ||
+      creaseType == CreaseType.Pseudohinge
+    ) {
+      this.assignment = MVAssignment.Mountain;
     } else if (creaseType == CreaseType.Hinge) {
-      this.assignment = MVAssignment.Tristate
+      this.assignment = MVAssignment.Tristate;
     } else {
-      this.assignment = MVAssignment.Unknown
+      this.assignment = MVAssignment.Unknown;
     }
   }
 }
@@ -179,12 +188,17 @@ class Graph<N extends Node, E extends Edge> {
     const toAngle = Math.atan2(e.from.y - e.to.y, e.from.x - e.to.x);
     let i = e.from.edges.length - 1;
     for (; i >= 0; i--) {
-      const otherEdge = e.from.edges[i]
+      const otherEdge = e.from.edges[i];
       const otherNode = otherEdge.getOtherNode(e.from);
-      const otherEdgeAngle = Math.atan2(otherNode.y - e.from.y, otherNode.x - e.from.x);
+      const otherEdgeAngle = Math.atan2(
+        otherNode.y - e.from.y,
+        otherNode.x - e.from.x
+      );
       const angleDifference = fromAngle - otherEdgeAngle;
       if (Math.abs(angleDifference) < TOLERANCE) {
-        throw new Error(`Tried to add edge parallel to existing incident edge.`);
+        throw new Error(
+          `Tried to add edge parallel to existing incident edge.`
+        );
       } else if (angleDifference > 0) {
         break;
       }
@@ -193,12 +207,17 @@ class Graph<N extends Node, E extends Edge> {
     e.from.edges[i + 1] = e;
     i = e.to.edges.length - 1;
     for (; i >= 0; i--) {
-      const otherEdge = e.to.edges[i]
+      const otherEdge = e.to.edges[i];
       const otherNode = otherEdge.getOtherNode(e.to);
-      const otherEdgeAngle = Math.atan2(otherNode.y - e.to.y, otherNode.x - e.to.x);
+      const otherEdgeAngle = Math.atan2(
+        otherNode.y - e.to.y,
+        otherNode.x - e.to.x
+      );
       const angleDifference = toAngle - otherEdgeAngle;
       if (Math.abs(angleDifference) < TOLERANCE) {
-        throw new Error(`Tried to add edge parallel to existing incident edge.`);
+        throw new Error(
+          `Tried to add edge parallel to existing incident edge.`
+        );
       } else if (angleDifference > 0) {
         break;
       }
@@ -218,13 +237,25 @@ class TreeGraph extends Graph<TreeNode, TreeEdge> {
     for (const fromNodeId of this.nodes.keys()) {
       const fromNode = this.nodes.get(fromNodeId) as TreeNode;
       const distancesTo = new Map();
-      this.getDistancesRecursive(distancesTo, 0, new Map(), fromNode, fromNode.edges[0] as TreeEdge);
+      this.getDistancesRecursive(
+        distancesTo,
+        0,
+        new Map(),
+        fromNode,
+        fromNode.edges[0] as TreeEdge
+      );
       d.set(fromNodeId, distancesTo);
     }
     return d;
   }
-  
-  getDistancesRecursive(distancesTo: Map<string, Map<string, number>>, distanceSoFar: number, distancesAlongPath: Map<string, number>, fromNode: TreeNode, e: TreeEdge) {
+
+  getDistancesRecursive(
+    distancesTo: Map<string, Map<string, number>>,
+    distanceSoFar: number,
+    distancesAlongPath: Map<string, number>,
+    fromNode: TreeNode,
+    e: TreeEdge
+  ) {
     distanceSoFar += e.length;
     const toNode = e.getOtherNode(fromNode);
     distancesAlongPath.set(toNode.id, distanceSoFar);
@@ -233,7 +264,13 @@ class TreeGraph extends Graph<TreeNode, TreeEdge> {
     } else {
       for (const ePrime of toNode.edges) {
         if (ePrime.getOtherNode(toNode) != fromNode) {
-          this.getDistancesRecursive(distancesTo, distanceSoFar, new Map(distancesAlongPath), toNode, ePrime as TreeEdge);
+          this.getDistancesRecursive(
+            distancesTo,
+            distanceSoFar,
+            new Map(distancesAlongPath),
+            toNode,
+            ePrime as TreeEdge
+          );
         }
       }
     }
@@ -244,14 +281,14 @@ enum CreasesGraphState {
   NewlyCreated,
   PreUMA,
   PostUMA,
-  FullyAssigned
+  FullyAssigned,
 }
 
 class CreasesGraph extends Graph<CreasesNode, Crease> {
   state: CreasesGraphState;
   leafExtensions: Map<CreasesNode, number>;
   faces: Set<Face>;
-  
+
   constructor(p: Packing) {
     super();
     this.state = CreasesGraphState.NewlyCreated;
@@ -266,7 +303,9 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
   }
 }
 
-export function pack(d: Map<string, Map<string, Map<string, number>>>): Packing {
+export function pack(
+  d: Map<string, Map<string, Map<string, number>>>
+): Packing {
   // TODO(Parker)
   throw new Error("Function pack() not yet implemented.");
 }
@@ -297,5 +336,5 @@ export {
   Graph,
   TreeGraph,
   CreasesGraphState,
-  CreasesGraph
+  CreasesGraph,
 };
