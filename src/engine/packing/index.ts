@@ -1,11 +1,12 @@
 import { matrix, math } from "mathjs";
 
 const TOLERANCE = 0.000001;
+const BINARY_SEARCH_TOLERANCE = TOLERANCE / 4;
 
 class Node {
   readonly id: string;
-  readonly x: number;
-  readonly y: number;
+  x: number;
+  y: number;
   edges: Edge[];
   [key: string]: any;
 
@@ -104,10 +105,13 @@ class Packing {
 
 class CreasesNode extends PackingNode {
   faces: Face[];
+  onBoundaryOfSquare: boolean;
 
   constructor(id: string, x: number, y: number) {
     super(id, x, y);
     this.faces = [];
+    this.onBoundaryOfSquare =
+      x < TOLERANCE || y < TOLERANCE || x > 1 - TOLERANCE || y > 1 - TOLERANCE;
   }
 }
 
@@ -226,6 +230,19 @@ class Graph<N extends Node, E extends Edge> {
     e.to.edges[i + 1] = e;
     this.edges.add(e);
   }
+
+  removeEdge(e: E) {
+    const fromIndex = e.from.edges.indexOf(e);
+    const toIndex = e.to.edges.indexOf(e);
+    if (fromIndex == -1 || toIndex == -1 || !this.edges.delete(e)) {
+      throw new Error(
+        `Edge ${e.from.id} -> ${e.to.id} not in graph or not in node edge list.`
+      );
+    } else {
+      e.from.edges.splice(fromIndex, 1);
+      e.to.edges.splice(toIndex, 1);
+    }
+  }
 }
 
 class TreeGraph extends Graph<TreeNode, TreeEdge> {
@@ -279,6 +296,7 @@ class TreeGraph extends Graph<TreeNode, TreeEdge> {
 
 enum CreasesGraphState {
   NewlyCreated,
+  Clean,
   PreUMA,
   PostUMA,
   FullyAssigned,
@@ -322,6 +340,7 @@ export function testOpt() {
 
 export {
   TOLERANCE,
+  BINARY_SEARCH_TOLERANCE,
   Node,
   Edge,
   Face,
