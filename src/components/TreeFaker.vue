@@ -5,19 +5,19 @@
     </center>
     <table>
       <tr class="threeViews">
-        <td class="viewBoxTd"><TreeView /></td>
+        <td class="viewBoxTd"><TreeView ref="tree" /></td>
         <td class="spacer" />
-        <td class="viewBoxTd"><PackingView /></td>
+        <td class="viewBoxTd"><PackingView ref="packing" /></td>
         <td class="spacer" />
-        <td class="viewBoxTd"><CreasesView /> </td>
+        <td class="viewBoxTd"><CreasesView ref="creases" /> </td>
       </tr>
 
       <tr class="threeButtons">
-        <td><button type="button">Generate Disk Packing</button></td>
+        <td><button type="button" v-on:click="generatePacking">Generate Disk Packing</button></td>
         <td />
-        <td><button type="button">Get Crease Pattern</button></td>
+        <td><button type="button" v-on:click="getCreasePattern">Get Crease Pattern</button></td>
         <td />
-        <td><button type="button">Export .FOLD File</button></td>
+        <td><button type="button" v-on:click="exportFold">Export .FOLD File</button></td>
       </tr>
 
       <tr class="threeInstructions">
@@ -58,5 +58,15 @@ import PackingView from './PackingView.vue';
   }
 })
 export default class TreeFaker extends Vue {
+  generatePacking() {
+    (this.$refs as any).tree.propagate();
+    (this.$refs as any).packing.pack();
+  }
+  getCreasePattern() {
+    alert('TODO');
+  }
+  exportFold() {
+    alert('TODO');
+  }
 }
 </script>
