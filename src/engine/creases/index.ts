@@ -1,4 +1,4 @@
-import { TOLERANCE, BINARY_SEARCH_TOLERANCE, Node, Edge, Face, TreeNode, TreeEdge, PackingNode, Packing, CreasesNode, CreaseType, MVAssignment, Crease, Graph, TreeGraph, CreasesGraphState, CreasesGraph }  from "../packing";
+import { TOLERANCE, BINARY_SEARCH_TOLERANCE, IS_RIGHT_TURN_CUTOFF_1, IS_RIGHT_TURN_CUTOFF_2, IS_RIGHT_TURN_CUTOFF_3, IS_RIGHT_TURN_CUTOFF_4, Node, Edge, Face, TreeNode, TreeEdge, PackingNode, Packing, CreasesNode, CreaseType, MVAssignment, Crease, Graph, TreeGraph, CreasesGraphState, CreasesGraph }  from "../packing";
 
 function getAnyElement<T>(s: Set<T>) {
   for (const e of s) {
@@ -9,8 +9,7 @@ function getAnyElement<T>(s: Set<T>) {
 
 function activeDistance(v1: CreasesNode, v2: CreasesNode, scaleFactor: number, d: Map<string, Map<string, Map<string, number>>>, leafExtensions: Map<CreasesNode, number>) {
   const distanceAlongPath = ((d.get(v1.id) as Map<string, Map<string, number>>).get(v2.id) as Map<string, number>).get(v2.id) as number;
-  return scaleFactor*
-    (distanceAlongPath + (leafExtensions.get(v1) as number) + (leafExtensions.get(v2) as number));
+  return scaleFactor*(distanceAlongPath + (leafExtensions.get(v1) as number) + (leafExtensions.get(v2) as number));
 }
 
 function isActive(v1: CreasesNode, v2: CreasesNode, scaleFactor: number, d: Map<string, Map<string, Map<string, number>>>, leafExtensions: Map<CreasesNode, number>) {
@@ -79,7 +78,7 @@ export function cleanPacking(p: Packing, d: Map<string, Map<string, Map<string, 
   for (const v1 of g.nodes.values()) {
     for (const v2 of g.nodes.values()) {
       if (v1.id < v2.id && isActive(v1, v2, p.scaleFactor, d, g.leafExtensions)) {
-        const axialCrease = new Crease(v1, v2, CreaseType.Axial); // TODO(Jamie) Change to ActiveHull or InactiveHull at the end (if on boundary).
+        const axialCrease = new Crease(v2, v1, CreaseType.Axial);
         g.addEdge(axialCrease);
       }
     }
@@ -105,7 +104,7 @@ export function cleanPacking(p: Packing, d: Map<string, Map<string, Map<string, 
     }
     for (const u of g.nodes.values()) {
       if (u != v && isActive(v, u, p.scaleFactor, d, g.leafExtensions)) {
-        const axialCrease = new Crease(v, u, CreaseType.Axial); // TODO(Jamie) Change to ActiveHull or InactiveHull at the end (if on boundary).
+        const axialCrease = new Crease(v, u, CreaseType.Axial);
         g.addEdge(axialCrease);
       }
     }
@@ -168,8 +167,7 @@ export function cleanPacking(p: Packing, d: Map<string, Map<string, Map<string, 
               const y2 = possibleConstraintVertex.y;
               const xDiff = x1 - x2;
               const yDiff = y1 - y2;
-              const r2 = activeDistance(v,
-                possibleConstraintVertex, p.scaleFactor, d, g.leafExtensions);
+              const r2 = activeDistance(v, possibleConstraintVertex, p.scaleFactor, d, g.leafExtensions);
               const r = (r2*r2 - xDiff*xDiff - yDiff*yDiff)/(2*(dx*xDiff + dy*yDiff - r2));
               //console.log(`Checking constraint on vertex ${possibleConstraintVertex.id}:  r = ${r/p.scaleFactor}`);
               if (0 < r && r < rOpt) {
@@ -195,11 +193,11 @@ export function cleanPacking(p: Packing, d: Map<string, Map<string, Map<string, 
           
           // Check y boundary conditions.
           if (Math.abs(dy) > TOLERANCE) {
-            for (const r of [-y1/dy, (1 - y1)/ dy]) {
+            for (const r of [-y1/dy, (1 - y1)/dy]) {
               if (0 < r && r < rOpt) {
                 //console.log(`Updating rOpt = ${r/p.scaleFactor} from y boundary condition`);
                 rOpt = r;
-                xOpt = x1 + r *dx;
+                xOpt = x1 + r*dx;
                 yOpt = y1 + r*dy;
               }
             }
@@ -268,15 +266,197 @@ export function cleanPacking(p: Packing, d: Map<string, Map<string, Map<string, 
       }
     }
   }
-  throw new Error("Caught in infinite loop.");
+  throw new Error("Caught in infinite loop while cleaning packing.");
+}
+
+
+// Returns whether v1-v2-v3 makes a right turn, and whether it is close to 180 degrees.
+export function isRightTurn(v1, v2, v3) {
+  const v1Angle = Math.atan2(v1.y - v2.y, v1.x - v2.x);
+  const v3Angle = Math.atan2(v3.y - v2.y, v3.x - v2.x);
+  const angleDifference = v3Angle - v1Angle;
+  if (angleDifference < 0) {
+    return [angleDifference < IS_RIGHT_TURN_CUTOFF_1,
+            angleDifference > -TOLERANCE || angleDifference < IS_RIGHT_TURN_CUTOFF_3];
+  } else {
+    return [angleDifference < IS_RIGHT_TURN_CUTOFF_2,
+            angleDifference < TOLERANCE || angleDifference > IS_RIGHT_TURN_CUTOFF_4];
+  }
 }
 
 export function buildFaces(g: CreasesGraph) {
-  // TODO(Jamie) Compute boundary (ensure nodes marked as onBoundaryOfSquare are included) and build face objects.
+  if (g.state != CreasesGraphState.Clean) {
+    throw new Error(`Should not be calling buildFaces from state '${g.state}'.`);
+  }
+  
+  // Compute convex hull using Graham scan with tolerance.
+  let leastX = 2;
+  let leastXVertex: null | CreasesNode = null;
+  const points: Array<CreasesNode> = [];
+  for (const v of g.nodes.values()) {
+    if (v.x < leastX) {
+      if (leastXVertex != null) {
+        points.push(leastXVertex);
+      }
+      leastX = v.x;
+      leastXVertex = v;
+    } else {
+      points.push(v);
+    }
+  }
+  if (leastXVertex == null) {
+    throw new Error("Bad node x values.");
+  }
+  const v0 = leastXVertex as CreasesNode;
+  points.sort(function(v1, v2){
+    const v1Angle = Math.atan2(v1.y - v0.y, v1.x - v0.x);
+    const v2Angle = Math.atan2(v2.y - v0.y, v2.x - v0.x);
+    return v2Angle - v1Angle;
+  });
+  const convexHull = [v0];
+  let stillComputingConvexHull = true;
+  for (let numIterations = 0; numIterations < 200; numIterations++) {
+    if (points.length == 0) {
+      stillComputingConvexHull = false;
+      break;
+    }
+    const point = points.pop() as CreasesNode;
+    while (convexHull.length > 1) {
+      const [isRight, is180] = isRightTurn(convexHull[convexHull.length - 2], convexHull[convexHull.length - 1], point);
+      if (isRight) {
+        const removedPoint = convexHull.pop() as CreasesNode;
+        if (is180) {
+          points.push(removedPoint); // This is the key differnce from ordinary Graham scan.
+        }
+      } else {
+        break;
+      }
+    }
+    convexHull.push(point);
+  }
+  if (stillComputingConvexHull) {
+    throw new Error("Caught in infinite loop while computing convex hull.");
+  }
+  //console.log(convexHull.map(v => v.id));
+  
+  // Set hull creases.
+  for (let i = 0; i < convexHull.length; i++) {
+    const v1 = convexHull[i] as CreasesNode;
+    const v2 = convexHull[(i + 1) % convexHull.length] as CreasesNode;
+    const e = g.getEdge(v1, v2);
+    if (e == undefined) {
+      g.addEdge(new Crease(v2, v1, CreaseType.InactiveHull));
+    } else {
+      e.updateCreaseType(CreaseType.ActiveHull);
+    }
+  }
+  
+  // Construct faces.
+  const undiscoveredEdges = new Set(g.edges.values());
+  const edgeQueue: Set<Crease> = new Set();
+  const firstVertexOfConvexHull = convexHull[0] as CreasesNode;
+  const secondVertexOfConvexHull = convexHull[1] as CreasesNode;
+  const firstEdgeOfConvexHull = g.getEdge(firstVertexOfConvexHull, secondVertexOfConvexHull) as Crease;
+  edgeQueue.add(firstEdgeOfConvexHull);
+  undiscoveredEdges.delete(firstEdgeOfConvexHull);
+  function fillInFaceToTheLeft(vStart: CreasesNode, eStart: Crease) {
+    const face = new Face();
+    g.faces.add(face);
+    let v = vStart;
+    let e = eStart;
+    //console.log(`Filling in face to the left from: ${v.id}  ${e.idString()}.`);
+    for (let numIterations = 0; numIterations < 100; numIterations++) {
+      //console.log(`${v.id}  ${e.idString()}`);
+      face.nodes.push(v);
+      if (v == e.from) {
+        if (e.leftFace == null) {
+          e.leftFace = face;
+        } else {
+          throw new Error(`Left face has already been set for edge ${e.idString()}.`);
+        }
+      } else {
+        if (e.right == null) {
+          e.rightFace = face;
+        } else {
+          throw new Error(`Right face has already been set for edge ${e.idString()}.`);
+        }
+      }
+      v = e.getOtherNode(v) as CreasesNode;
+      e = v.clockwise(e) as Crease;
+      if (v == vStart && e == eStart) {
+        return;
+      } else if (undiscoveredEdges.delete(e)) {
+        //console.log(`Deleting ${e.idString()} from undiscoveredEdges.`);
+        edgeQueue.add(e);
+      }
+    }
+    throw new Error("Caught in infinite loop while building faces.");
+  }
+  while (edgeQueue.size > 0) {
+    const e = getAnyElement(edgeQueue);
+    edgeQueue.delete(e);
+    if (e.leftFace == null) {
+      fillInFaceToTheLeft(e.from as CreasesNode, e);
+    }
+    if (e.rightFace == null) {
+      fillInFaceToTheLeft(e.to as CreasesNode, e);
+    }
+  }
+  
+  // Check that all creases are accounted for (will be good if graph is connected).
+  if (undiscoveredEdges.size > 0) {
+    throw new Error(`Edges ${Array.from(undiscoveredEdges).map(e => e.idString())} lie in different component than first hull edge.`);
+  }
+  
+  // Set outer face.
+  if (firstEdgeOfConvexHull.from == firstVertexOfConvexHull) {
+    (firstEdgeOfConvexHull.rightFace as Face).isOuterFace = true;
+  } else {
+    (firstEdgeOfConvexHull.leftFace as Face).isOuterFace = true;
+  }
+  
   g.state = CreasesGraphState.PreUMA;
 }
 
+export function buildMoleculeRecursive(wholeFace: Face, elevation: number) {
+  // TODO(Jamie).
+}
+
 export function generateMolecules(g: CreasesGraph) {
-  // TODO(Jamie) UMA code here.
+  if (g.state != CreasesGraphState.PreUMA) {
+    throw new Error(`Should not be calling buildFaces from state '${g.state}'.`);
+  }
+  for (const face of Array.from(g.faces)) {
+    if (!face.isOuterFace) {
+      buildMoleculeRecursive(face, 0);
+    }
+  }
+  
+  // TODO(Jamie) Build creases.
+  
+  /* TODO Uncomment and test this if we care about it.
+  for (const v of Array.from(g.nodes.values()) {
+    g.suppressRidgeNodeIfRedundant(v);
+  }*/
+  
   g.state = CreasesGraphState.PostUMA;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

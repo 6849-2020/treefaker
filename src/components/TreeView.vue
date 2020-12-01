@@ -5,7 +5,6 @@
 <script lang="ts">
 import { Component, Prop, Vue } from "vue-property-decorator";
 import { JSXGraph, Board, COORDS_BY_USER } from "jsxgraph";
-import { TreeGraph, TreeNode, TreeEdge } from "../engine/packing";
 
 @Component
 export default class TreeView extends Vue {
@@ -38,55 +37,6 @@ export default class TreeView extends Vue {
     this.treePoints.set(initialPoint1, new Set());
     this.treePoints.set(initialPoint2, new Set());
     this.createLine(initialPoint1, initialPoint2);
-  }
-
-  propagate() {
-    /* Update the global state with a `TreeGraph` representation. */
-    const tree = new TreeGraph();
-    const newPoints = new Map();
-
-    // Generate nodes.
-    console.log(this.treePoints);
-    this.treePoints.forEach(function(edges: any, point: any) {
-      const px = point.X();
-      const py = point.Y();
-      const v = new TreeNode(point.name, px, py);
-      tree.addNode(v);
-      newPoints.set([px, py].toString(), v);
-    });
-
-    // Generate deduplicated edges.
-    const seen = new Set();
-    this.treePoints.forEach(function(edges: any) {
-      for (const edge of edges) {
-        const p1 = edge.point1;
-        const p2 = edge.point2;
-        const p1x = p1.X();
-        const p1y = p1.Y();
-        const p2x = p2.X();
-        const p2y = p2.Y();
-        console.log("p1:", p1);
-        console.log("p2:", p2);
-        if (
-          !seen.has([p1x, p1y, p2x, p2y].toString()) &&
-          !seen.has([p2x, p2y, p1x, p1y].toString())
-        ) {
-          const v1 = newPoints.get([p1x, p1y].toString());
-          const v2 = newPoints.get([p2x, p2y].toString());
-          const length = Math.sqrt(
-            Math.pow(p1x - p2x, 2) + Math.pow(p1y - p2y, 2)
-          );
-          console.log("edge: (", p1x, ",", p1y, ") -> (", p2x, ",", p2y, "):", length);
-          const edge = new TreeEdge(v1, v2, length);
-          tree.addEdge(edge);
-          seen.add([p1x, p1y, p2x, p2y].toString());
-          seen.add([p2x, p2y, p1x, p1y].toString());
-        }
-      }
-    });
-
-    // Save the new tree to global state.
-    this.$store.commit("updateTreeGraph", tree);
   }
 
   findSubtree(

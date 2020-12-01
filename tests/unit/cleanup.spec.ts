@@ -98,7 +98,7 @@ describe("cleanPacking", function() {
     const d = tree.getDistances();
     const g = cleanPacking(p, d);
     const creases: CreaseType[] = [];
-    for (const crease of g.edges) {
+    for (const crease of g.edges.values()) {
       creases.push(crease.creaseType);
     }
     expect(creases).to.eql([CreaseType.Axial, CreaseType.Axial, CreaseType.Axial, CreaseType.Axial]);
