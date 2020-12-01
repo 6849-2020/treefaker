@@ -6,7 +6,8 @@
  */
 import { matrix, zeros, size } from "mathjs";
 
-type PackingMap = Record<string, Record<string, Record<string, number>>>;
+//type PackingMap = Record<string, Record<string, Record<string, number>>>;
+type PackingMap = Map<string, Map<string, Map<string, number>>>;
 export type Constraint = (X: matrix) => number;
 export type GradConstraint = (X: matrix) => matrix;
 export type ConstraintSet = {
@@ -63,10 +64,7 @@ function overlapConstraint(dists: matrix, i: number, j: number): Constraint {
       Math.pow(X[i] - X[j], 2) + Math.pow(X[i + n] - X[j + n], 2)
     );
     const scaledLength = scale * length;
-    if (dist < scaledLength) {
-      return scaledLength - dist;
-    }
-    return 0;
+    return scaledLength - dist;
   };
 }
 
@@ -78,19 +76,16 @@ function gradOverlapConstraint(
   const n = size(dists)[0];
   const length = dists[i][j];
   return function(X: matrix): matrix {
-    const scale = X[2 * n];
     const dist = Math.sqrt(
       Math.pow(X[i] - X[j], 2) + Math.pow(X[i + n] - X[j + n], 2)
     );
     const invDist = 1 / dist;
     const deriv = zeros([2 * n + 1]);
-    if (dist < scale * length) {
-      deriv[i] = invDist * (X[j] - X[i]);
-      deriv[j] = invDist * (X[i] - X[j]);
-      deriv[i + n] = invDist * (X[j + n] - X[i + n]);
-      deriv[j + n] = invDist * (X[i + n] - X[j + n]);
-      deriv[2 * n] = length;
-    }
+    deriv[i] = invDist * (X[j] - X[i]);
+    deriv[j] = invDist * (X[i] - X[j]);
+    deriv[i + n] = invDist * (X[j + n] - X[i + n]);
+    deriv[j + n] = invDist * (X[i + n] - X[j + n]);
+    deriv[2 * n] = length;
     return deriv;
   };
 }
@@ -142,16 +137,20 @@ export function genGradConstraints(dists: matrix): GradConstraint[] {
 }
 
 export function toMatrix(nodes: PackingMap): matrix {
-  const n = Object.keys(nodes).length;
+  const keys = Array.from(nodes.keys()).sort();
+  const n = keys.length;
   const dists = zeros([n, n]);
-  const keys = Object.keys(nodes);
 
   for (let i = 0; i < n; i++) {
     const iKey = keys[i];
     for (let j = 0; j < n; j++) {
       const jKey = keys[j];
+      console.log("(i,j):", iKey, jKey);
       if (i !== j) {
-        dists[i][j] = nodes[iKey][jKey][jKey];
+        dists[i][j] = nodes
+          .get(iKey)
+          ?.get(jKey)
+          ?.get(jKey);
       }
     }
   }

@@ -9,7 +9,8 @@ function getAnyElement<T>(s: Set<T>) {
 
 function activeDistance(v1: CreasesNode, v2: CreasesNode, scaleFactor: number, d: Map<string, Map<string, Map<string, number>>>, leafExtensions: Map<CreasesNode, number>) {
   const distanceAlongPath = ((d.get(v1.id) as Map<string, Map<string, number>>).get(v2.id) as Map<string, number>).get(v2.id) as number;
-  return scaleFactor*(distanceAlongPath + (leafExtensions.get(v1) as number) + (leafExtensions.get(v2) as number));
+  return scaleFactor*
+    (distanceAlongPath + (leafExtensions.get(v1) as number) + (leafExtensions.get(v2) as number));
 }
 
 function isActive(v1: CreasesNode, v2: CreasesNode, scaleFactor: number, d: Map<string, Map<string, Map<string, number>>>, leafExtensions: Map<CreasesNode, number>) {
@@ -167,7 +168,8 @@ export function cleanPacking(p: Packing, d: Map<string, Map<string, Map<string, 
               const y2 = possibleConstraintVertex.y;
               const xDiff = x1 - x2;
               const yDiff = y1 - y2;
-              const r2 = activeDistance(v, possibleConstraintVertex, p.scaleFactor, d, g.leafExtensions);
+              const r2 = activeDistance(v,
+                possibleConstraintVertex, p.scaleFactor, d, g.leafExtensions);
               const r = (r2*r2 - xDiff*xDiff - yDiff*yDiff)/(2*(dx*xDiff + dy*yDiff - r2));
               //console.log(`Checking constraint on vertex ${possibleConstraintVertex.id}:  r = ${r/p.scaleFactor}`);
               if (0 < r && r < rOpt) {
@@ -193,11 +195,11 @@ export function cleanPacking(p: Packing, d: Map<string, Map<string, Map<string, 
           
           // Check y boundary conditions.
           if (Math.abs(dy) > TOLERANCE) {
-            for (const r of [-y1/dy, (1 - y1)/dy]) {
+            for (const r of [-y1/dy, (1 - y1)/ dy]) {
               if (0 < r && r < rOpt) {
                 //console.log(`Updating rOpt = ${r/p.scaleFactor} from y boundary condition`);
                 rOpt = r;
-                xOpt = x1 + r*dx;
+                xOpt = x1 + r *dx;
                 yOpt = y1 + r*dy;
               }
             }

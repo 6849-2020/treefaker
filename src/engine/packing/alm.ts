@@ -48,10 +48,11 @@ const ALF = 1e-4;
 // Convergence tolerances.
 const EPS = Number.EPSILON;
 const X_TOL = 4 * EPS;
-const G_TOL = 1e-2;
+const G_TOL = 1e-4;
 
 function maxStepSize(X: matrix): number {
   // We assume that each of the `n` points has an associated
+  // eslint-disable-next-line no-irregular-whitespace
   // upper and lower bound such that 0 ≤ x_i, y_i ≤ 1.
   // Following Lang, we choose the maximum step size to be the length
   // of a diagonal in the 2n-dimensional hypercube [0, 1] x ... [0 x 1].
@@ -72,7 +73,6 @@ function augLag(
     const lm = mult[i];
     const val = fn(X);
     const mu = (-0.5 * lm) / weight;
-    // TODO: work out (pencil & paper) exactly what Lang is doing here.
     total += val < mu ? mu : (lm + val * weight) * val;
   }
   return total;
@@ -139,7 +139,7 @@ function outer(v1: matrix, v2: matrix): matrix | undefined {
   return res;
 }
 
-function rescaleSol(X: matrix, dists: matrix): matrix {
+export function rescaleSol(X: matrix, dists: matrix): matrix {
   /**
    * Coerce a solution to be valid by scaling points to [0, 1] x [0, 1]
    * and computing the optimal scale factor.
@@ -167,9 +167,8 @@ function rescaleSol(X: matrix, dists: matrix): matrix {
       packingDists[j][i] = dist;
     }
   }
-  const ratio = min(
-    flatten(dotDivide(packingDists, dists)).filter((x) => !isNaN(x))
-  );
+  const ratio =
+    min(flatten(dotDivide(packingDists, dists)).filter((x) => !isNaN(x))) / 2;
   return [...xCoords, ...yCoords, ratio];
 }
 
@@ -180,6 +179,7 @@ function lineSearch(
   mult: matrix,
   weight: number
 ): Step | undefined {
+  //console.log("\t--- minimizing along line ---");
   const searchNorm = norm(searchDirection);
   let scale = 1;
   const maxStep = maxStepSize(old.X);
@@ -194,11 +194,21 @@ function lineSearch(
   }
 
   const minStep =
-    X_TOL /
-    dotDivide(
-      abs(searchDirection),
-      max([abs(old.X), ones([size(old.X)[0]])], 0)
+    EPS /
+    max(
+      dotDivide(
+        abs(searchDirection),
+        max([abs(old.X), ones([size(old.X)[0]])], 0)
+      ),
+      0
     );
+  /*
+  console.log("\tsearch direction:", searchDirection);
+  console.log("\tscale:", scale);
+  console.log("\tinitial slope:", slope);
+  console.log("\tminimum step size", minStep);
+  */
+
   let lm = 1.0; // step size relative to a full Newton step.
   let lastLm = 0.0; // last step size
   let lastF = 0.0; // last augmented Lagrangian function value
@@ -206,8 +216,14 @@ function lineSearch(
   // eslint-disable-next-line no-constant-condition
   while (true) {
     // Take a step along the search direction.
-    const XNew = add(lastX, multiply(scale * lm, searchDirection));
+    const XNew = add(old.X, multiply(scale * lm, searchDirection));
     const fNew = augLag(XNew, constraints, mult, weight);
+    /*
+    console.log("lm:", lm);
+    console.log("\t\tX:", XNew);
+    console.log("\t\tf:", fNew);
+    */
+
     const fTarget = lastF + ALF * lm * slope;
     if (lm < minStep) {
       // Quit once the step size is below the minimum tolerance.
@@ -290,9 +306,11 @@ function minimizeAugLag(
     searchDirection = subtract(nextStep.X, lastStep.X);
 
     // Test for convergence of step size.
-    const xTest = dotDivide(
-      abs(searchDirection),
-      max([abs(nextStep.X), ones([size(nextStep.X)[0]])], 0)
+    const xTest = max(
+      dotDivide(
+        abs(searchDirection),
+        max([abs(nextStep.X), ones([size(nextStep.X)[0]])], 0)
+      )
     );
     if (xTest < X_TOL) {
       break;
@@ -346,15 +364,16 @@ export function solve(
   constraints: ConstraintSet
 ): matrix | undefined {
   const nConstraints = constraints.constraints.length;
-  const maxStep = maxStepSize(X);
   let mult = zeros([nConstraints]);
   let weight = WEIGHT_START;
-  const scaledX = rescaleSol(X, dists);
+  //const scaledX = rescaleSol(X, dists);
   let lastStep = {
-    X: scaledX,
-    f: augLag(scaledX, constraints, mult, weight),
-    grad: gradAugLag(scaledX, constraints, mult, weight),
+    X: X,
+    f: augLag(X, constraints, mult, weight),
+    grad: gradAugLag(X, constraints, mult, weight),
   };
+  let bestObjVal: number | undefined = 0;
+  let bestSol: matrix | undefined = undefined;
 
   for (let iter = 0; iter < ITERS_OUTER; iter++) {
     console.log("--- outer iteration", iter, "---");
@@ -369,13 +388,12 @@ export function solve(
       // Something went wrong in the inner optimization step. :(
       return undefined;
     }
-    const X = rescaleSol(unscaledNextStep.X, dists);
-    const nextStep = {
+    const nextStep = unscaledNextStep; /*{
       X: X,
       f: augLag(X, constraints, mult, weight),
       grad: gradAugLag(X, constraints, mult, weight),
-    };
-    console.log("scaled:", nextStep);
+    };*/
+    //console.log("scaled:", nextStep);
     const feasibility = max(
       max(constraints.constraints.map((con: Constraint) => con(nextStep.X))),
       0
@@ -385,22 +403,19 @@ export function solve(
     // TODO (@pjrule): allow for arbitrary objective functions.
     // (For our first version, we are primarily concerned with
     //  maximizing the scale factor.)
-    const lastObjVal = -lastStep.X[size(lastStep.X)[0] - 1];
     const nextObjVal = -nextStep.X[size(nextStep.X)[0] - 1];
     console.log("\tfeasibility:", feasibility);
     console.log("\tobj:", nextObjVal);
 
-    if (
-      iter > 0 &&
-      feasibility < G_TOL &&
-      Math.abs(lastObjVal - nextObjVal) < G_TOL
-    ) {
+    if (iter > 0 && feasibility < G_TOL && bestObjVal > nextObjVal) {
       // Terminate if the solution is feasible and has converged
       // to a local minimum.
-      return nextStep.X;
+      bestSol = nextStep.X;
+      bestObjVal = nextObjVal;
+      console.log("new best feasible solution found");
     }
     weight = Math.min(weight * WEIGHT_RATIO, WEIGHT_MAX);
     lastStep = nextStep;
   }
-  return undefined; // Failure to converge.
+  return bestSol;
 }

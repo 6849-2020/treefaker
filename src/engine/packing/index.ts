@@ -97,10 +97,6 @@ class Packing {
     this.scaleFactor = 0;
     this.nodes = new Map();
   }
-
-  rescale() {
-    // TODO(Parker): compute optimal scale factor.
-  }
 }
 
 class CreasesNode extends PackingNode {
@@ -320,23 +316,6 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
     }
   }
 }
-
-export function pack(
-  d: Map<string, Map<string, Map<string, number>>>
-): Packing {
-  // TODO(Parker)
-  throw new Error("Function pack() not yet implemented.");
-}
-
-export function testOpt() {
-  // TODO(Parker) hardcode augmented Lagrangian and derivative, using clipping for inequality constraints.
-  const augLag = function(x: matrix, lambda: matrix, mu: number) {
-    const n = (math.size(x) - 1) / 2;
-    const obj = -x[math.size(x) - 1];
-  };
-}
-
-// TODO(Parker) optimization stuff.
 
 export {
   TOLERANCE,
