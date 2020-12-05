@@ -1,6 +1,8 @@
 import { expect } from "chai";
 import { Node, Edge, Face, TreeNode, TreeEdge, PackingNode, Packing, CreasesNode, CreaseType, MVAssignment, Crease, Graph, TreeGraph, CreasesGraphState, CreasesGraph }  from "../../src/engine/packing";
 
+import { twoNodeTree } from "../helper";
+
 describe("TreeGraph", function() {
   let centralNode: TreeNode;
   let v1: TreeNode;
@@ -29,6 +31,15 @@ describe("TreeGraph", function() {
     edges = centralNode.edges as TreeEdge[];
     d = tree.getDistances();
     dV1V2 = (d.get("v1") as Map<string, Map<string, number>>).get("v2") as Map<string, number>;
+  });
+  
+  it("computes distances correctly on two-node tree", function() {
+    const simpleTree = twoNodeTree();
+    const distances = simpleTree.getDistances();
+    const distance1 = (distances.get("0") as Map<string, Map<string, number>>).get("1") as Map<string, number>;
+    expect(distance1.get("1")).to.equal(2);
+    const distance2 = (distances.get("1") as Map<string, Map<string, number>>).get("0") as Map<string, number>;
+    expect(distance2.get("0")).to.equal(2);
   });
   
   it("has edges arranged in correct order", function() {

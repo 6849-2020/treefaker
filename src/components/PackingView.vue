@@ -54,7 +54,7 @@ export default class PackingView extends Vue {
     });
     const distances = (this.$store.state as any).treeGraph.getDistances();
     const leafDistances = new Map();
-    distances.forEach(function(dists: Map, key: string) {
+    distances.forEach(function(dists: Map<string, Map<string, Map<string, number>>>, key: string) {
       if (leaves.has(key)) {
         leafDistances.set(key, dists);
       }

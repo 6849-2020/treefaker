@@ -78,14 +78,14 @@ class Edge {
 
 class Face {
   isOuterFace : boolean;
-  readonly nodes : Node[]
-  //edges : Edge[]
+  readonly nodes : CreasesNode[]
+  inactiveHullCrease: Crease | null;
   [key: string]: any;
   
   constructor() {
     this.isOuterFace = false;
     this.nodes = [];
-    //this.edges = [];
+    this.inactiveHullCrease = null;
   }
 }
 
@@ -110,20 +110,18 @@ class Packing {
     this.scaleFactor = 0;
     this.nodes = new Map();
   }
-
-  rescale() {
-    // TODO(Parker): compute optimal scale factor.
-  }
 }
 
 class CreasesNode extends PackingNode {
   faces: Face[];
   onBoundaryOfSquare: boolean;
+  goUpRidge: CreasesNode | null;
   
   constructor(id: string, x: number, y: number) {
     super(id, x, y);
     this.faces = [];
     this.onBoundaryOfSquare = x < TOLERANCE || y < TOLERANCE || x > 1 - TOLERANCE || y > 1 - TOLERANCE;
+    this.goUpRidge = null;
   }
 }
 
@@ -297,6 +295,7 @@ enum CreasesGraphState {
   NewlyCreated,
   Clean,
   PreUMA,
+  MidUMA,
   PostUMA,
   FullyAssigned
 }
@@ -305,12 +304,14 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
   state: CreasesGraphState;
   leafExtensions: Map<CreasesNode, number>;
   faces: Set<Face>;
+  nextInternalNodeIndex: number;
   
   constructor(p: Packing) {
     super();
     this.state = CreasesGraphState.NewlyCreated;
     this.leafExtensions = new Map();
     this.faces = new Set();
+    this.nextInternalNodeIndex = 1;
     for (const nodeId of p.nodes.keys()) {
       const packingNode = p.nodes.get(nodeId) as PackingNode;
       const creasesNode = new CreasesNode(nodeId, packingNode.x, packingNode.y);
@@ -319,8 +320,46 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
     }
   }
   
-  // TODO This isn't being called anywhere yet, and would need to be tested.
-  suppressRidgeNodeIfRedundant(v2: CreasesNode) {
+  nextInternalId() {
+    return "i" + (this.nextInternalNodeIndex++).toString();
+  }
+  
+  subdivideCrease(e: Crease, x: number, y: number) {
+    if (this.state != CreasesGraphState.PreUMA) {
+      throw new Error(`Do not call subdivideCrease from state ${this.state}.`);
+    }
+    const fromNode = e.from as CreasesNode;
+    const toNode = e.to as CreasesNode;
+    const leftFace = e.leftFace as Face;
+    const rightFace = e.rightFace as Face;
+    const indexOfToNodeInLeftFace = leftFace.nodes.indexOf(toNode);
+    const indexOfFromNodeInRightFace = rightFace.nodes.indexOf(fromNode);
+    const creaseType = e.creaseType;
+    
+    this.removeEdge(e);
+    const newNode = new CreasesNode(this.nextInternalId(), x, y);
+    this.addNode(newNode);
+    const firstCrease = new Crease(newNode, fromNode, creaseType);
+    this.addEdge(firstCrease);
+    firstCrease.leftFace = leftFace;
+    firstCrease.rightFace = rightFace;
+    const secondCrease = new Crease(toNode, newNode, creaseType);
+    this.addEdge(secondCrease);
+    secondCrease.leftFace = leftFace;
+    secondCrease.rightFace = rightFace;
+    if (leftFace != rightFace) {
+      // Faces are only the same when input tree is a path,
+      // in which case we don't care about updating these pointers.
+      leftFace.nodes.splice(indexOfToNodeInLeftFace, 0, newNode);
+      rightFace.nodes.splice(indexOfFromNodeInRightFace, 0, newNode);
+    }
+    return newNode;
+  }
+  
+  suppressNodeIfRedundant(v2: CreasesNode) {
+    if (this.state != CreasesGraphState.PreUMA) {
+      throw new Error(`Do not call suppressRidgeNodeIfRedundant from state ${this.state}.`);
+    }
     if (v2.edges.length == 2) {
       const e2 = v2.edges[0] as Crease;
       const e3 = v2.edges[1] as Crease;
@@ -328,49 +367,75 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
       const v3 = e3.getOtherVertex(v2);
       const v2Angle = Math.atan2(v2.y - v1.y, v2.x - v1.x);
       const v3Angle = Math.atan2(v3.y - v1.y, v3.x - v1.x);
+      const creaseType = e2.creaseType;
       if (Math.abs(v2Angle - v3Angle) < TOLERANCE) {
-        if (e2.creaseType != CreaseType.Ridge) {
-          throw new Error(`Edge ${e2.idString()} should be a ridge crease.`);
-        }
-        if (e3.creaseType != CreaseType.Ridge) {
-          throw new Error(`Edge ${e3.idString()} should be a ridge crease.`);
+        if (creaseType != e3.creaseType || (creaseType != CreaseType.Ridge && creaseType != CreaseType.Hinge)) {
+          throw new Error(`Invalid crease types: edge ${e2.idString()} is of type ${e2.creaseType} and edge ${e3.idString()} is of type ${e3.creaseType}.`);
         }
         const leftFace = (e2.from == v1 ? e2.leftFace : e2.rightFace) as Face;
         const rightFace = (e2.from == v1 ? e2.rightFace : e2.leftFace) as Face;
+        if (leftFace == rightFace) {
+          throw new Error(`Ridge node ${v2.id} adjacent to same face on both sides!`);
+        }
         this.removeEdge(e2);
         this.removeEdge(e3);
         this.nodes.delete(v2.id);
-        const newCrease = new Crease(v3, v1, CreaseType.Ridge);
+        const newCrease = new Crease(v3, v1, creaseType);
         this.addEdge(newCrease);
         newCrease.leftFace = leftFace;
         newCrease.rightFace = rightFace;
         const v2IndexInLeftFace = leftFace.nodes.indexOf(v2);
         leftFace.nodes.splice(v2IndexInLeftFace, 1);
-        if (leftFace != rightFace) {
-          const v2IndexInRightFace = rightFace.nodes.indexOf(v2);
-          rightFace.nodes.splice(v2IndexInRightFace, 1);
-        }
+        const v2IndexInRightFace = rightFace.nodes.indexOf(v2);
+        rightFace.nodes.splice(v2IndexInRightFace, 1);
         return true;
       }
     }
     return false;
   }
+  
+  fillInFaceToTheLeft(vStart: CreasesNode, eStart: Crease) {
+    const face = new Face();
+    this.faces.add(face);
+    let v = vStart;
+    let e = eStart;
+    for (let numIterations = 0; numIterations < 100; numIterations++) {
+      face.nodes.push(v);
+      if (v == e.from) {
+        e.leftFace = face;
+      } else {
+        e.rightFace = face;
+      }
+      if (e.creaseType == CreaseType.InactiveHull) {
+        if (face.inactiveHullEdge == null) {
+          face.inactiveHullEdge = e;
+        } else {
+          throw new Error(`Face has at least two inactive hull edges: ${face.inactiveHullEdge.idString()} and ${e.idString()}.`);
+        }
+      }
+      v = e.getOtherNode(v) as CreasesNode;
+      e = v.clockwise(e) as Crease;
+      if (v == vStart && e == eStart) {
+        return face;
+      }
+    }
+    throw new Error("Caught in infinite loop while filling in new face in UMA.");
+  }
+  
+  subdivideFace(face: Face, newCreases: Set<Crease>) {
+    const newFaces: Array<Face> = [];
+    for (const e of newCreases) {
+      if (e.leftFace == null || e.leftFace == face) {
+        newFaces.push(this.fillInFaceToTheLeft(e.from as CreasesNode, e));
+      }
+      if (e.rightFace == null || e.rightFace == face) {
+        newFaces.push(this.fillInFaceToTheLeft(e.to as CreasesNode, e));
+      }
+    }
+    this.faces.delete(face);
+    return newFaces;
+  }
 }
-
-export function pack(d: Map<string, Map<string, Map<string, number>>>): Packing {
-  // TODO(Parker)
-  throw new Error("Function pack() not yet implemented.");
-}
-
-export function testOpt() {
-  // TODO(Parker) hardcode augmented Lagrangian and derivative, using clipping for inequality constraints.
-  const augLag = function(x: matrix, lambda: matrix, mu: number) {
-    const n = (math.size(x) - 1) / 2;
-    const obj = -x[math.size(x) - 1];
-  };
-}
-
-// TODO(Parker) optimization stuff.
 
 export {
   TOLERANCE,

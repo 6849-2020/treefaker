@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { Node, Edge, Face, TreeNode, TreeEdge, PackingNode, Packing, CreasesNode, CreaseType, MVAssignment, Crease, Graph, TreeGraph, CreasesGraphState, CreasesGraph, TOLERANCE }  from "../../src/engine/packing";
 import { cleanPacking, get2CircleIntersection, getIndexOfConvexGap } from "../../src/engine/creases";
-import { fiveStarTree, fiveStarPacking, threeNodeSuboptimalTree, threeNodeSuboptimalPacking, tenStarSuboptimalTree, tenStarSuboptimalPacking } from "../helper";
+import { fiveStarTree, fiveStarPacking, threeNodeSuboptimalTree, threeNodeSuboptimalPacking, tenStarSuboptimalTree, tenStarSuboptimalPacking, twoNodeTree, twoNodeAdjacentCornersPacking } from "../helper";
 
 describe("getIndexOfConvexGap", function() {
   it("returns null list when no convex gap exists", function() {
@@ -84,6 +84,14 @@ describe("get2CircleIntersection", function() {
 });
 
 describe("cleanPacking", function() {
+  it("on adjacent corners two-node packing, does not change leaf lengths", function() {
+    const tree = twoNodeTree();
+    const p = twoNodeAdjacentCornersPacking();
+    const d = tree.getDistances();
+    const g = cleanPacking(p, d);
+    expect(Array.from(g.leafExtensions.values())).to.eql([0, 0]);
+  });
+
   it("on optimal 4-leaf star packing, does not change leaf lengths", function() {
     const tree = fiveStarTree();
     const p = fiveStarPacking();

@@ -88,7 +88,33 @@ export function tenStarSuboptimalPacking() {
     [0, 0],
     [5/16, 0],
     [9/16, 0],
-    [1, 0],
+    [1, 0]
   ]);
+}
+
+export function rabbitEarOnSideTree() {
+  return starTree([1, 4, 4]);
+}
+
+export function rabbitEarOnSidePacking() {
+  return starPacking(1/8, [
+    [1, 1/2],
+    [5/8, 0],
+    [5/8, 1]
+  ]);
+}
+
+export function twoNodeTree() {
+  return starTree([2]);
+}
+
+export function twoNodeAdjacentCornersPacking() {
+  const packing = new Packing();
+  packing.scaleFactor = 1/2;
+  const v0 = new PackingNode("0", 1, 0);
+  packing.nodes.set("0", v0);
+  const v1 = new PackingNode("1", 1, 1);
+  packing.nodes.set("1", v1);
+  return packing;
 }
 
