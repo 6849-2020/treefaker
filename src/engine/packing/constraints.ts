@@ -6,8 +6,7 @@
  */
 import { matrix, zeros, size } from "mathjs";
 
-//type PackingMap = Record<string, Record<string, Record<string, number>>>;
-type PackingMap = Map<string, Map<string, Map<string, number>>>;
+export type PackingMap = Map<string, Map<string, Map<string, number>>>;
 export type Constraint = (X: matrix) => number;
 export type GradConstraint = (X: matrix) => matrix;
 export type ConstraintSet = {

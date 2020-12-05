@@ -3,7 +3,7 @@ import Vuex, { StoreOptions } from "vuex";
 import App from "./App.vue";
 import "./assets/css/style.css";
 import "./assets/css/jsxgraph.css";
-import { TreeGraph, CreasesGraph } from "./engine/packing";
+import { TreeGraph, CreasesGraph, Packing } from "./engine/packing";
 
 Vue.use(Vuex);
 Vue.config.productionTip = false;
@@ -13,6 +13,7 @@ Vue.config.productionTip = false;
 export type RootState = {
   treeGraph: TreeGraph | undefined;
   creasesGraph: CreasesGraph | undefined;
+  packing: Packing | undefined;
 };
 
 const storeTemplate: StoreOptions<RootState> = {
@@ -23,6 +24,8 @@ const storeTemplate: StoreOptions<RootState> = {
     // The cleaned-up packing, ready to be converted into creases.
     // TODO: is this name too confusing?
     creasesGraph: undefined,
+
+    packing: undefined,
   },
   mutations: {
     updateTreeGraph(state, graph: TreeGraph) {
@@ -30,6 +33,9 @@ const storeTemplate: StoreOptions<RootState> = {
     },
     updateCreasesGraph(state, graph: CreasesGraph) {
       state.creasesGraph = graph;
+    },
+    updatePacking(state, packing: Packing) {
+      state.packing = packing;
     },
   },
 };

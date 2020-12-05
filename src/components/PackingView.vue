@@ -116,6 +116,10 @@ export default class PackingView extends Vue {
 
     // Clean up the packing to enforce active path invariants.
     this.$store.commit(
+      "updatePacking",
+      packing
+    );
+    this.$store.commit(
       "updateCreasesGraph",
       cleanPacking(packing, leafDistances)
     );

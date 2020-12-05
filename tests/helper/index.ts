@@ -1,4 +1,20 @@
-import { Node, Edge, Face, TreeNode, TreeEdge, PackingNode, Packing, CreasesNode, CreaseType, MVAssignment, Crease, Graph, TreeGraph, CreasesGraphState, CreasesGraph }  from "../../src/engine/packing";
+import {
+  Node,
+  Edge,
+  Face,
+  TreeNode,
+  TreeEdge,
+  PackingNode,
+  Packing,
+  CreasesNode,
+  CreaseType,
+  MVAssignment,
+  Crease,
+  Graph,
+  TreeGraph,
+  CreasesGraphState,
+  CreasesGraph,
+} from "../../src/engine/packing";
 
 export function fiveStarTree() {
   const v1 = new TreeNode("1", 0, 0);
@@ -29,7 +45,7 @@ export function fiveStarPacking() {
   const v4 = new PackingNode("4", 0, 1);
   const v5 = new PackingNode("5", 0, 0);
   const packing = new Packing();
-  packing.scaleFactor = 1/6;
+  packing.scaleFactor = 1 / 6;
   packing.nodes.set("2", v2);
   packing.nodes.set("3", v3);
   packing.nodes.set("4", v4);
@@ -41,12 +57,16 @@ export function starTree(lengths: number[]) {
   const centralVertex = new TreeNode("0", 0, 0);
   const tree = new TreeGraph();
   tree.addNode(centralVertex);
-  const angleDiff = Math.PI/lengths.length;
-  const angleInitial = angleDiff/2 - Math.PI;
+  const angleDiff = Math.PI / lengths.length;
+  const angleInitial = angleDiff / 2 - Math.PI;
   for (let i = 0; i < lengths.length; i++) {
     const length = lengths[i] as number;
-    const angle = angleInitial + i*angleDiff;
-    const v = new TreeNode((i + 1).toString(), length*Math.cos(angle), length*Math.sin(angle));
+    const angle = angleInitial + i * angleDiff;
+    const v = new TreeNode(
+      (i + 1).toString(),
+      length * Math.cos(angle),
+      length * Math.sin(angle)
+    );
     tree.addNode(v);
     const e = new TreeEdge(v, centralVertex, length);
     tree.addEdge(e);
@@ -70,7 +90,10 @@ export function threeNodeSuboptimalTree() {
 }
 
 export function threeNodeSuboptimalPacking() {
-  return starPacking(1/16, [[1, 0], [11.5/16, 6/16]]);
+  return starPacking(1 / 16, [
+    [1, 0],
+    [11.5 / 16, 6 / 16],
+  ]);
 }
 
 export function tenStarSuboptimalTree() {
@@ -78,17 +101,17 @@ export function tenStarSuboptimalTree() {
 }
 
 export function tenStarSuboptimalPacking() {
-  return starPacking(1/16, [
+  return starPacking(1 / 16, [
     [0, 1],
-    [5/16, 1],
-    [10/16, 1],
+    [5 / 16, 1],
+    [10 / 16, 1],
     [1, 1],
-    [0, 8/16],
-    [11.5/16, 6/16],
+    [0, 8 / 16],
+    [11.5 / 16, 6 / 16],
     [0, 0],
-    [5/16, 0],
-    [9/16, 0],
-    [1, 0]
+    [5 / 16, 0],
+    [9 / 16, 0],
+    [1, 0],
   ]);
 }
 
@@ -97,10 +120,10 @@ export function rabbitEarOnSideTree() {
 }
 
 export function rabbitEarOnSidePacking() {
-  return starPacking(1/8, [
-    [1, 1/2],
-    [5/8, 0],
-    [5/8, 1]
+  return starPacking(1 / 8, [
+    [1, 1 / 2],
+    [5 / 8, 0],
+    [5 / 8, 1],
   ]);
 }
 
@@ -110,11 +133,10 @@ export function twoNodeTree() {
 
 export function twoNodeAdjacentCornersPacking() {
   const packing = new Packing();
-  packing.scaleFactor = 1/2;
+  packing.scaleFactor = 1 / 2;
   const v0 = new PackingNode("0", 1, 0);
   packing.nodes.set("0", v0);
   const v1 = new PackingNode("1", 1, 1);
   packing.nodes.set("1", v1);
   return packing;
 }
-

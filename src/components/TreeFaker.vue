@@ -63,7 +63,7 @@ export default class TreeFaker extends Vue {
     (this.$refs as any).packing.pack();
   }
   getCreasePattern() {
-    alert('TODO');
+    (this.$refs as any).creases.show();
   }
   exportFold() {
     alert('TODO');

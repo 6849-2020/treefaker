@@ -1,11 +1,11 @@
 import { matrix, math } from "mathjs";
 
 const TOLERANCE = 0.000001;
-const BINARY_SEARCH_TOLERANCE = TOLERANCE/4;
+const BINARY_SEARCH_TOLERANCE = TOLERANCE / 4;
 const IS_RIGHT_TURN_CUTOFF_1 = -Math.PI - TOLERANCE;
 const IS_RIGHT_TURN_CUTOFF_2 = Math.PI - TOLERANCE;
-const IS_RIGHT_TURN_CUTOFF_3 = -2*Math.PI + TOLERANCE;
-const IS_RIGHT_TURN_CUTOFF_4 = 2*Math.PI - TOLERANCE;
+const IS_RIGHT_TURN_CUTOFF_3 = -2 * Math.PI + TOLERANCE;
+const IS_RIGHT_TURN_CUTOFF_4 = 2 * Math.PI - TOLERANCE;
 
 function getIdString(id1: string, id2: string) {
   if (id1 > id2) {
@@ -28,24 +28,28 @@ class Node {
     this.y = y;
     this.edges = [];
   }
-  
+
   counterclockwise(e: Edge) {
     const index = this.edges.indexOf(e);
     if (index == -1) {
-      throw new Error(`Edge ${e.from.id} -> ${e.to.id} not adjacent to vertex ${this.id}.`);
+      throw new Error(
+        `Edge ${e.from.id} -> ${e.to.id} not adjacent to vertex ${this.id}.`
+      );
     } else {
       const numEdges = this.edges.length;
-      return this.edges[(index + 1) % numEdges]
+      return this.edges[(index + 1) % numEdges];
     }
   }
-  
+
   clockwise(e: Edge) {
     const index = this.edges.indexOf(e);
     if (index == -1) {
-      throw new Error(`Edge ${e.from.id} -> ${e.to.id} not adjacent to vertex ${this.id}.`);
+      throw new Error(
+        `Edge ${e.from.id} -> ${e.to.id} not adjacent to vertex ${this.id}.`
+      );
     } else {
       const numEdges = this.edges.length;
-      return this.edges[(index - 1 + numEdges) % numEdges]
+      return this.edges[(index - 1 + numEdges) % numEdges];
     }
   }
 }
@@ -54,34 +58,33 @@ class Edge {
   readonly to: Node;
   readonly from: Node;
   [key: string]: any;
-  
+
   constructor(to: Node, from: Node) {
     this.to = to;
     this.from = from;
   }
-  
-  getOtherNode(n : Node) {
+
+  getOtherNode(n: Node) {
     if (n == this.to) {
       return this.from;
     } else if (n == this.from) {
       return this.to;
-    }
-    else {
+    } else {
       throw new Error("Node not in edge.");
     }
   }
-  
+
   idString() {
     return getIdString(this.from.id, this.to.id);
   }
 }
 
 class Face {
-  isOuterFace : boolean;
-  readonly nodes : CreasesNode[]
+  isOuterFace: boolean;
+  readonly nodes: CreasesNode[];
   inactiveHullCrease: Crease | null;
   [key: string]: any;
-  
+
   constructor() {
     this.isOuterFace = false;
     this.nodes = [];
@@ -116,11 +119,12 @@ class CreasesNode extends PackingNode {
   faces: Face[];
   onBoundaryOfSquare: boolean;
   goUpRidge: CreasesNode | null;
-  
+
   constructor(id: string, x: number, y: number) {
     super(id, x, y);
     this.faces = [];
-    this.onBoundaryOfSquare = x < TOLERANCE || y < TOLERANCE || x > 1 - TOLERANCE || y > 1 - TOLERANCE;
+    this.onBoundaryOfSquare =
+      x < TOLERANCE || y < TOLERANCE || x > 1 - TOLERANCE || y > 1 - TOLERANCE;
     this.goUpRidge = null;
   }
 }
@@ -132,7 +136,7 @@ enum CreaseType {
   Hinge,
   Pseudohinge,
   ActiveHull,
-  InactiveHull
+  InactiveHull,
 }
 
 enum MVAssignment {
@@ -140,7 +144,7 @@ enum MVAssignment {
   Valley,
   Tristate,
   Unknown,
-  Boundary
+  Boundary,
 }
 
 class Crease extends Edge {
@@ -148,14 +152,20 @@ class Crease extends Edge {
   rightFace: Face | null;
   creaseType: CreaseType;
   assignment: MVAssignment;
-  
+
   updateCreaseType(creaseType: CreaseType) {
     this.creaseType = creaseType;
-    if (creaseType == CreaseType.ActiveHull || creaseType == CreaseType.InactiveHull) {
+    if (
+      creaseType == CreaseType.ActiveHull ||
+      creaseType == CreaseType.InactiveHull
+    ) {
       this.assignment = MVAssignment.Boundary;
     } else if (creaseType == CreaseType.Gusset) {
       this.assignment = MVAssignment.Valley;
-    } else if (creaseType == CreaseType.Ridge || creaseType == CreaseType.Pseudohinge) {
+    } else if (
+      creaseType == CreaseType.Ridge ||
+      creaseType == CreaseType.Pseudohinge
+    ) {
       this.assignment = MVAssignment.Mountain;
     } else if (creaseType == CreaseType.Hinge) {
       this.assignment = MVAssignment.Tristate;
@@ -163,16 +173,16 @@ class Crease extends Edge {
       this.assignment = MVAssignment.Unknown;
     }
   }
-  
+
   constructor(to: CreasesNode, from: CreasesNode, creaseType: CreaseType) {
     super(to, from);
     this.leftFace = null;
     this.rightFace = null;
-    
+
     // TODO(Parker) These two lines are only necessary because TypeScript is being stupid. Can you fix?
     this.creaseType = CreaseType.Axial;
     this.assignment = MVAssignment.Unknown;
-    
+
     this.updateCreaseType(creaseType);
   }
 }
@@ -205,12 +215,17 @@ class Graph<N extends Node, E extends Edge> {
     const toAngle = Math.atan2(e.from.y - e.to.y, e.from.x - e.to.x);
     let i = e.from.edges.length - 1;
     for (; i >= 0; i--) {
-      const otherEdge = e.from.edges[i]
+      const otherEdge = e.from.edges[i];
       const otherNode = otherEdge.getOtherNode(e.from);
-      const otherEdgeAngle = Math.atan2(otherNode.y - e.from.y, otherNode.x - e.from.x);
+      const otherEdgeAngle = Math.atan2(
+        otherNode.y - e.from.y,
+        otherNode.x - e.from.x
+      );
       const angleDifference = fromAngle - otherEdgeAngle;
       if (Math.abs(angleDifference) < TOLERANCE) {
-        throw new Error(`Tried to add edge ${e.idString()} parallel to existing incident edge.`);
+        throw new Error(
+          `Tried to add edge ${e.idString()} parallel to existing incident edge.`
+        );
       } else if (angleDifference > 0) {
         break;
       }
@@ -219,12 +234,17 @@ class Graph<N extends Node, E extends Edge> {
     e.from.edges[i + 1] = e;
     i = e.to.edges.length - 1;
     for (; i >= 0; i--) {
-      const otherEdge = e.to.edges[i]
+      const otherEdge = e.to.edges[i];
       const otherNode = otherEdge.getOtherNode(e.to);
-      const otherEdgeAngle = Math.atan2(otherNode.y - e.to.y, otherNode.x - e.to.x);
+      const otherEdgeAngle = Math.atan2(
+        otherNode.y - e.to.y,
+        otherNode.x - e.to.x
+      );
       const angleDifference = toAngle - otherEdgeAngle;
       if (Math.abs(angleDifference) < TOLERANCE) {
-        throw new Error(`Tried to add edge parallel to existing incident edge.`);
+        throw new Error(
+          `Tried to add edge parallel to existing incident edge.`
+        );
       } else if (angleDifference > 0) {
         break;
       }
@@ -233,23 +253,25 @@ class Graph<N extends Node, E extends Edge> {
     e.to.edges[i + 1] = e;
     this.edges.set(e.idString(), e);
   }
-  
+
   getEdge(v1: N, v2: N) {
     const idString = getIdString(v1.id, v2.id);
     return this.edges.get(idString);
   }
-  
+
   removeEdge(e: E) {
     const fromIndex = e.from.edges.indexOf(e);
     const toIndex = e.to.edges.indexOf(e);
     if (fromIndex == -1 || toIndex == -1 || !this.edges.delete(e.idString())) {
-      throw new Error(`Edge ${e.from.id} -> ${e.to.id} not in graph or not in node edge list.`);
+      throw new Error(
+        `Edge ${e.from.id} -> ${e.to.id} not in graph or not in node edge list.`
+      );
     } else {
       e.from.edges.splice(fromIndex, 1);
       e.to.edges.splice(toIndex, 1);
     }
   }
-  
+
   removeEdgeFromVertices(v1: N, v2: N) {
     const e = this.getEdge(v1, v2);
     if (e) {
@@ -269,13 +291,25 @@ class TreeGraph extends Graph<TreeNode, TreeEdge> {
     for (const fromNodeId of this.nodes.keys()) {
       const fromNode = this.nodes.get(fromNodeId) as TreeNode;
       const distancesTo = new Map();
-      this.getDistancesRecursive(distancesTo, 0, new Map(), fromNode, fromNode.edges[0] as TreeEdge);
+      this.getDistancesRecursive(
+        distancesTo,
+        0,
+        new Map(),
+        fromNode,
+        fromNode.edges[0] as TreeEdge
+      );
       d.set(fromNodeId, distancesTo);
     }
     return d;
   }
-  
-  getDistancesRecursive(distancesTo: Map<string, Map<string, number>>, distanceSoFar: number, distancesAlongPath: Map<string, number>, fromNode: TreeNode, e: TreeEdge) {
+
+  getDistancesRecursive(
+    distancesTo: Map<string, Map<string, number>>,
+    distanceSoFar: number,
+    distancesAlongPath: Map<string, number>,
+    fromNode: TreeNode,
+    e: TreeEdge
+  ) {
     distanceSoFar += e.length;
     const toNode = e.getOtherNode(fromNode);
     distancesAlongPath.set(toNode.id, distanceSoFar);
@@ -284,7 +318,13 @@ class TreeGraph extends Graph<TreeNode, TreeEdge> {
     } else {
       for (const ePrime of toNode.edges) {
         if (ePrime.getOtherNode(toNode) != fromNode) {
-          this.getDistancesRecursive(distancesTo, distanceSoFar, new Map(distancesAlongPath), toNode, ePrime as TreeEdge);
+          this.getDistancesRecursive(
+            distancesTo,
+            distanceSoFar,
+            new Map(distancesAlongPath),
+            toNode,
+            ePrime as TreeEdge
+          );
         }
       }
     }
@@ -297,7 +337,7 @@ enum CreasesGraphState {
   PreUMA,
   MidUMA,
   PostUMA,
-  FullyAssigned
+  FullyAssigned,
 }
 
 class CreasesGraph extends Graph<CreasesNode, Crease> {
@@ -305,7 +345,7 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
   leafExtensions: Map<CreasesNode, number>;
   faces: Set<Face>;
   nextInternalNodeIndex: number;
-  
+
   constructor(p: Packing) {
     super();
     this.state = CreasesGraphState.NewlyCreated;
@@ -319,11 +359,11 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
       this.leafExtensions.set(creasesNode, 0);
     }
   }
-  
+
   nextInternalId() {
     return "i" + (this.nextInternalNodeIndex++).toString();
   }
-  
+
   subdivideCrease(e: Crease, x: number, y: number) {
     if (this.state != CreasesGraphState.PreUMA) {
       throw new Error(`Do not call subdivideCrease from state ${this.state}.`);
@@ -335,7 +375,7 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
     const indexOfToNodeInLeftFace = leftFace.nodes.indexOf(toNode);
     const indexOfFromNodeInRightFace = rightFace.nodes.indexOf(fromNode);
     const creaseType = e.creaseType;
-    
+
     this.removeEdge(e);
     const newNode = new CreasesNode(this.nextInternalId(), x, y);
     this.addNode(newNode);
@@ -355,10 +395,12 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
     }
     return newNode;
   }
-  
+
   suppressNodeIfRedundant(v2: CreasesNode) {
     if (this.state != CreasesGraphState.PreUMA) {
-      throw new Error(`Do not call suppressRidgeNodeIfRedundant from state ${this.state}.`);
+      throw new Error(
+        `Do not call suppressRidgeNodeIfRedundant from state ${this.state}.`
+      );
     }
     if (v2.edges.length == 2) {
       const e2 = v2.edges[0] as Crease;
@@ -369,13 +411,22 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
       const v3Angle = Math.atan2(v3.y - v1.y, v3.x - v1.x);
       const creaseType = e2.creaseType;
       if (Math.abs(v2Angle - v3Angle) < TOLERANCE) {
-        if (creaseType != e3.creaseType || (creaseType != CreaseType.Ridge && creaseType != CreaseType.Hinge)) {
-          throw new Error(`Invalid crease types: edge ${e2.idString()} is of type ${e2.creaseType} and edge ${e3.idString()} is of type ${e3.creaseType}.`);
+        if (
+          creaseType != e3.creaseType ||
+          (creaseType != CreaseType.Ridge && creaseType != CreaseType.Hinge)
+        ) {
+          throw new Error(
+            `Invalid crease types: edge ${e2.idString()} is of type ${
+              e2.creaseType
+            } and edge ${e3.idString()} is of type ${e3.creaseType}.`
+          );
         }
         const leftFace = (e2.from == v1 ? e2.leftFace : e2.rightFace) as Face;
         const rightFace = (e2.from == v1 ? e2.rightFace : e2.leftFace) as Face;
         if (leftFace == rightFace) {
-          throw new Error(`Ridge node ${v2.id} adjacent to same face on both sides!`);
+          throw new Error(
+            `Ridge node ${v2.id} adjacent to same face on both sides!`
+          );
         }
         this.removeEdge(e2);
         this.removeEdge(e3);
@@ -393,7 +444,7 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
     }
     return false;
   }
-  
+
   fillInFaceToTheLeft(vStart: CreasesNode, eStart: Crease) {
     const face = new Face();
     this.faces.add(face);
@@ -410,7 +461,9 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
         if (face.inactiveHullEdge == null) {
           face.inactiveHullEdge = e;
         } else {
-          throw new Error(`Face has at least two inactive hull edges: ${face.inactiveHullEdge.idString()} and ${e.idString()}.`);
+          throw new Error(
+            `Face has at least two inactive hull edges: ${face.inactiveHullEdge.idString()} and ${e.idString()}.`
+          );
         }
       }
       v = e.getOtherNode(v) as CreasesNode;
@@ -419,9 +472,11 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
         return face;
       }
     }
-    throw new Error("Caught in infinite loop while filling in new face in UMA.");
+    throw new Error(
+      "Caught in infinite loop while filling in new face in UMA."
+    );
   }
-  
+
   subdivideFace(face: Face, newCreases: Set<Crease>) {
     const newFaces: Array<Face> = [];
     for (const e of newCreases) {
@@ -459,5 +514,5 @@ export {
   Graph,
   TreeGraph,
   CreasesGraphState,
-  CreasesGraph
+  CreasesGraph,
 };
