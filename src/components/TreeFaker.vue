@@ -17,7 +17,7 @@
         <td />
         <td><button type="button" v-on:click="getCreasePattern">Get Crease Pattern</button></td>
         <td />
-        <td><button type="button" v-on:click="exportFold" :disabled='creasesReady'>Export .FOLD File</button></td>
+        <td><button type="button" v-on:click="exportFold">Export .FOLD File</button></td>
       </tr>
 
       <tr class="threeInstructions">
@@ -49,7 +49,6 @@ import { Component, Prop, Vue } from "vue-property-decorator";
 import TreeView from './TreeView.vue';
 import CreasesView from './CreasesView.vue';
 import PackingView from './PackingView.vue';
-import { CreasesGraph, CreasesGraphState } from "../engine/packing";
 
 @Component({
   components: {
@@ -67,19 +66,7 @@ export default class TreeFaker extends Vue {
     (this.$refs as any).creases.show();
   }
   exportFold() {
-    (this.$refs as any).creases.download();
-  }
-  get creasesReady() {
-    // TODO (@pjrule): move to CreasesView?
-    /*
-    const creasesGraph = this.$store.state.creasesGraph as CreasesGraph;
-    return (
-      creasesGraph === undefined ||
-      creasesGraph.state === CreasesGraphState.PreUMA
-    );
-    */
-   // @Jamie: uncomment above when we're ready for the real crease pattern.
-   return false;
+    alert('TODO');
   }
 }
 </script>

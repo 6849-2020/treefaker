@@ -135,7 +135,7 @@ describe("cleanPacking", function() {
     expect(vCreases.y).to.equal(1);
   });
   
-  it("on 10-leaf tree suboptimal packing, increases edge length and moves vertex to center", function() {
+  it("on 10-leaf star tree suboptimal packing, increases edge length and moves vertex to center", function() {
     const tree = tenStarSuboptimalTree();
     const p = tenStarSuboptimalPacking();
     const d = tree.getDistances();
@@ -149,7 +149,7 @@ describe("cleanPacking", function() {
     expect(vCreases.y).to.equal(8/16);
   });
   
-  it("on 10-leaf tree suboptimal packing variant, performs three different kinds of moves to center", function() {
+  it("on 10-leaf star tree suboptimal packing variant, performs three different kinds of moves to center", function() {
     const tree = tenStarSuboptimalTree();
     const p = tenStarSuboptimalPacking();
     (p.nodes.get("6") as PackingNode).x = 9/16;
