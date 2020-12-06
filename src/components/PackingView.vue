@@ -134,7 +134,10 @@ export default class PackingView extends Vue {
     });
     packingBoard.create("grid", []);
     creasesGraph.nodes.forEach(function(v, idx) {
-      const center = packingBoard.create("point", [v.x, v.y], { name: v.id });
+      const center = packingBoard.create("point", [v.x, v.y], {
+        name: v.id,
+        fixed: true
+      });
       const radius =
         (leafLengths.get(v.id) + creasesGraph.leafExtensions.get(v)) *
         packing.scaleFactor;
@@ -142,7 +145,7 @@ export default class PackingView extends Vue {
         console.log("leaf extensions:", creasesGraph.leafExtensions.get(v));
         console.log("scale factor:", packing.scaleFactor);
         console.log("radius:", radius);
-      packingBoard.create("circle", [center, radius]);
+      packingBoard.create("circle", [center, radius], { fixed: true });
     });
 
     this.packingBoard = packingBoard;
