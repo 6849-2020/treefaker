@@ -26,6 +26,7 @@ export function generateFold(graph: CreasesGraph) {
   const coords: [number, number][] = [];
   const edges: [number, number][] = [];
   const assignments: string[] = [];
+  const angles: (number | null)[] = [];
   const faceVertices: number[][] = [];
   const faceEdges: number[][] = [];
 
@@ -46,7 +47,20 @@ export function generateFold(graph: CreasesGraph) {
     vertexEdges[toIdx].push(idx);
     vertexEdges[fromIdx].push(idx);
     edges.push([toIdx, fromIdx]);
-    assignments.push(edgeAssignmentShort(edge.assignment));
+    const assn = edgeAssignmentShort(edge.assignment);
+    assignments.push(assn);
+    // Origami Simulator does not automatically infer fold angles upon a POST request,
+    // so we generate them manually. See https://github.com/amandaghassaei/
+    // OrigamiSimulator/blob/539f1cd4eaa8b7b631f1697b54dc726409e33799/js/importer.js
+    if (assn === "M") {
+      angles.push(-180);
+    } else if (assn === "V") {
+      angles.push(180);
+    } else if (assn === "F") {
+      angles.push(0);
+    } else {
+      angles.push(null);
+    }
   }
   for (const face of graph.faces) {
     const nodeIds: Set<number> = new Set();
@@ -77,6 +91,7 @@ export function generateFold(graph: CreasesGraph) {
     vertices_coords: coords,
     edges_vertices: edges,
     edges_assignment: assignments,
+    edges_foldAngle: angles,
     vertices_edges: vertexEdges,
     faces_vertices: faceVertices,
     faces_edges: faceEdges,
