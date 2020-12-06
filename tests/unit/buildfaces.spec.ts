@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { Node, Edge, Face, TreeNode, TreeEdge, PackingNode, Packing, CreasesNode, CreaseType, MVAssignment, Crease, Graph, TreeGraph, CreasesGraphState, CreasesGraph, TOLERANCE }  from "../../src/engine/packing";
 import { cleanPacking, get2CircleIntersection, getIndexOfConvexGap, buildFaces } from "../../src/engine/creases";
-import { fiveStarTree, fiveStarPacking, threeNodeSuboptimalTree, threeNodeSuboptimalPacking, tenStarSuboptimalTree, tenStarSuboptimalPacking } from "../helper";
+import { fiveStarTree, fiveStarPacking, threeNodeSuboptimalTree, threeNodeSuboptimalPacking, tenStarSuboptimalTree, tenStarSuboptimalPacking, demaineLangPaperSmallTree, demaineLangPaperSmallPacking } from "../helper";
 
 describe("buildFaces", function() {
   it("on optimal 4-leaf star, constructs two faces with correct orientation", function() {
@@ -64,7 +64,7 @@ describe("buildFaces", function() {
     expect(face.nodes.map(n => n.id).sort()).to.eql(["1", "2"]);
   });
   
-  it("on cleaned 10-leaf tree, constructs the right number of faces and sets new hull edge pointers", function() {
+  it("on cleaned 10-leaf star tree, constructs the right number of faces and sets new hull edge pointers", function() {
     const tree = tenStarSuboptimalTree();
     const p = tenStarSuboptimalPacking();
     const d = tree.getDistances();
@@ -76,13 +76,28 @@ describe("buildFaces", function() {
     expect(faces.map(face => face.nodes.length).sort()).to.eql([4, 5, 6, 9]);
     
     const crease104 = g.getEdge(g.nodes.get("4") as CreasesNode, g.nodes.get("10") as CreasesNode) as Crease;
-    expect(crease104.creaseType).to.equal(CreaseType.InactiveHull)
+    expect(crease104.creaseType).to.equal(CreaseType.InactiveHull);
     const leftFace = crease104.leftFace as Face;
     const rightFace = crease104.rightFace as Face;
     expect(leftFace.nodes.length).to.equal(4);
     expect(rightFace.nodes.length).to.equal(9);
     expect(leftFace.isOuterFace).to.be.false;
     expect(rightFace.isOuterFace).to.be.true;
+  });
+  
+  it("on small example from paper, makes two faces and one inactive hull crease", function() {
+    const tree = demaineLangPaperSmallTree();
+    const p = demaineLangPaperSmallPacking();
+    const d = tree.getDistances();
+    const g = cleanPacking(p, d);
+    buildFaces(g);
+    
+    expect(g.faces.size).to.equal(2);
+    
+    const crease12 = g.getEdge(g.nodes.get("1") as CreasesNode, g.nodes.get("2") as CreasesNode) as Crease;
+    expect(crease12.creaseType).to.equal(CreaseType.ActiveHull);
+    const crease15 = g.getEdge(g.nodes.get("1") as CreasesNode, g.nodes.get("5") as CreasesNode) as Crease;
+    expect(crease15.creaseType).to.equal(CreaseType.InactiveHull);
   });
   
   it("throws error if edges are disconnected", function() {
