@@ -1,4 +1,5 @@
 import { TOLERANCE, BINARY_SEARCH_TOLERANCE, IS_RIGHT_TURN_CUTOFF_1, IS_RIGHT_TURN_CUTOFF_2, IS_RIGHT_TURN_CUTOFF_3, IS_RIGHT_TURN_CUTOFF_4, Node, Edge, Face, TreeNode, TreeEdge, PackingNode, Packing, CreasesNode, CreaseType, MVAssignment, Crease, Graph, TreeGraph, CreasesGraphState, CreasesGraph }  from "../packing";
+import { facetOrder } from "../ordering";
 
 function getAnyElement<T>(s: Set<T>) {
   for (const e of s) {
@@ -430,7 +431,7 @@ export function buildFaces(g: CreasesGraph) {
   g.state = CreasesGraphState.PreUMA;
 }
 
-export function buildMoleculeRecursive(g: CreasesGraph, boundary: CreasesNode[], z: Map<CreasesNode, Map<CreasesNode, Array<[string, number, CreasesNode | null]>>>, newCreases: Set<Crease>) {
+export function buildMoleculeRecursive(g: CreasesGraph, boundary: CreasesNode[], z: Map<CreasesNode, Map<CreasesNode, Array<[string, number, CreasesNode | null]>>>, newCreases: Set<Crease>): [Set<Crease>, CreasesNode[][]] | undefined {
   // Compute inset amount h. Based on:
   // https://github.com/6849-2020/treemaker/blob/75b47cdcd46a45e5de0eba95630119d2828426ad/Source/tmModel/tmTreeClasses/tmPoly.cpp#L719
   const nn = boundary.length;
@@ -745,12 +746,13 @@ export function buildMoleculeRecursive(g: CreasesGraph, boundary: CreasesNode[],
   if (insetNodes.length == 2) {
     const newCrease = new Crease(insetNodes[1] as CreasesNode, insetNodes[0] as CreasesNode, CreaseType.Ridge);
     g.addEdge(newCrease);
-    return newCreases;
+    return [newCreases, [boundary]];
   } else if (insetNodes.length > 2) {
     const indexStack = [insetNodes.length - 1, 0];
+    let boundaries: CreasesNode[][] = [];
     for (let numIterations = 0; numIterations < 100; numIterations++) {
       if (indexStack.length == 0) {
-        return newCreases;
+        return [newCreases, boundaries];
       } else {
         const newBoundaryStartIndex = indexStack.pop() as number;
         const newBoundaryEndIndex = indexStack.pop() as number;
@@ -797,7 +799,10 @@ export function buildMoleculeRecursive(g: CreasesGraph, boundary: CreasesNode[],
           newBoundary.push(insetNodes[activePathEndIndex]);
           activePathStartIndex = activePathEndIndex;
         }
-        buildMoleculeRecursive(g, newBoundary, z, newCreases);
+        const split = buildMoleculeRecursive(g, newBoundary, z, newCreases);
+        if (split !== undefined) {
+          boundaries = boundaries.concat(split[1]);
+        }
       }
     }
     throw new Error("Caught in infinite loop while recursively building molecules.");
@@ -850,10 +855,11 @@ export function subdivideCreasesInitial(g: CreasesGraph, d: Map<string, Map<stri
   return [z, inactiveHullCreases] as [Map<CreasesNode, Map<CreasesNode, Array<[string, number, CreasesNode | null]>>>, Set<Crease>];
 }
 
-export function generateMolecules(g: CreasesGraph, d: Map<string, Map<string, Map<string, number>>>, scaleFactor: number) {
+export function generateMolecules(g: CreasesGraph, tg: TreeGraph, scaleFactor: number) {
   if (g.state != CreasesGraphState.PreUMA) {
     throw new Error(`Should not be calling generateMolecules from state ${g.state}.`);
   }
+  const d = tg.getDistances();
   
   // Record the boundary calls we have to make before more nodes get added in subdivision.
   const boundaries: Array<Array<CreasesNode>> = [];
@@ -872,8 +878,13 @@ export function generateMolecules(g: CreasesGraph, d: Map<string, Map<string, Ma
   // Build molecules recursively.
   const [z, inactiveHullCreases] = subdivideCreasesInitial(g, d, scaleFactor);
   const newCreases: Set<Crease> = new Set();
+  let splitBoundaries: CreasesNode[][] = [];
+
   for (const boundary of boundaries) {
-    buildMoleculeRecursive(g, boundary, z, newCreases);
+    const split = buildMoleculeRecursive(g, boundary, z, newCreases);
+    if (split !== undefined) {
+      splitBoundaries = splitBoundaries.concat(split[1]);
+    }
   }
   
   // Fill in hinges and pseudohinges in each inactive hull face.
@@ -931,6 +942,9 @@ export function generateMolecules(g: CreasesGraph, d: Map<string, Map<string, Ma
   for (const v of Array.from(g.nodes.values())) {
     g.suppressNodeIfRedundant(v);
   }
+
+  // Assign a facet ordering.
+  facetOrder(tg, g, splitBoundaries);
   
   g.state = CreasesGraphState.PostUMA;
 }
