@@ -1,9 +1,12 @@
 import Vue from "vue";
 import Vuex, { StoreOptions } from "vuex";
 import App from "./App.vue";
-import "./assets/css/origami";
-import "./assets/css/style.css";
+import "./assets/css/origamiSimulator/nav.css";
+import "./assets/css/origamiSimulator/main.css";
 import "./assets/css/jsxgraph.css";
+import "bootstrap/dist/css/bootstrap.css";
+import "bootstrap-vue/dist/bootstrap-vue.css";
+import "./assets/css/style.css";
 import { TreeGraph, CreasesGraph, Packing } from "./engine/packing";
 
 Vue.use(Vuex);

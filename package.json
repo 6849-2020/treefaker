@@ -9,6 +9,8 @@
     "lint": "vue-cli-service lint"
   },
   "dependencies": {
+    "bootstrap": "^4.5.3",
+    "bootstrap-vue": "^2.20.1",
     "core-js": "^3.6.5",
     "file-saver": "^2.0.5",
     "jsxgraph": "^1.1.0",

@@ -1,7 +1,3 @@
-body {
-  background-color: #ffeedd;
-}
-
 .logo {
   width: 10%;
 }
@@ -41,4 +37,22 @@ button {
 .threeInstructions td {
   padding: 0px 10px;
   vertical-align: top;
+}
+
+.container {
+  padding: 50px;
+    max-width: 1600px;
+}
+
+.description {
+  margin: 0 auto;
+  max-width: 720px;
+  margin-bottom: 60px;
+  font-size: 1.1em;
+}
+
+table.views {
+    width: 100%;
+    min-width: 540px;
+    max-width: 1600px;
 }
