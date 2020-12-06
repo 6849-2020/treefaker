@@ -5,6 +5,7 @@
 <script lang="ts">
 import { Component, Prop, Vue } from "vue-property-decorator";
 import { JSXGraph, Board } from "jsxgraph";
+import { saveAs } from "file-saver";
 import {
   TreeGraph,
   CreasesGraph,
@@ -12,6 +13,7 @@ import {
   MVAssignment
 } from "../engine/packing";
 import { buildFaces, generateMolecules, cleanPacking } from "../engine/creases";
+import { generateFold } from "../engine/creases/export";
 import { fiveStarPacking, fiveStarTree } from "../../tests/helper";
 
 function getColor(mv: MVAssignment): string {
@@ -27,9 +29,11 @@ function getColor(mv: MVAssignment): string {
   }
   return "#666666"; // unknown, etc.
 }
+
 @Component
 export default class CreasesView extends Vue {
-  creasesBoard: Board;
+  creasesBoard: Board | undefined;
+  fold: string | undefined;
 
   mounted() {
     const creasesBoard = JSXGraph.initBoard("creasesViewBox", {
@@ -39,6 +43,7 @@ export default class CreasesView extends Vue {
     });
     creasesBoard.create("grid", []);
     this.creasesBoard = creasesBoard;
+    this.fold = undefined;
   }
 
   show() {
@@ -68,16 +73,27 @@ export default class CreasesView extends Vue {
       const v1 = edge.to;
       const v2 = edge.from;
       const assignment = edge.assignment;
-      const p1 = creasesBoard.create("point", [v1.x, v1.y], { name: v1.id });
-      const p2 = creasesBoard.create("point", [v2.x, v2.y], { name: v2.id });
+      const p1 = creasesBoard.create("point", [v1.x, v1.y], { name: v1.id, fixed: true });
+      const p2 = creasesBoard.create("point", [v2.x, v2.y], { name: v2.id, fixed: true });
       creasesBoard.create("segment", [p1, p2], {
         name: edgeId,
         strokeColor: getColor(assignment),
         strokeWidth: 2,
-        highlightStrokeWidth: 4
+        highlightStrokeWidth: 4,
+        fixed: true,
       });
     }
     this.creasesBoard = creasesBoard;
+    this.fold = JSON.stringify(generateFold(creasesGraph));
+  }
+
+  download() {
+    if (this.fold !== undefined) {
+      const blob = new Blob([this.fold], {
+        type: "application.json;charset=utf-8"
+      });
+      saveAs(blob, "treefaker.fold");
+    }
   }
 }
 </script>
