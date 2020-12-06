@@ -1,6 +1,7 @@
 import { matrix, math } from "mathjs";
 
 const TOLERANCE = 0.000001;
+const UPDATE_TOLERANCE = TOLERANCE*5;
 const BINARY_SEARCH_TOLERANCE = TOLERANCE / 4;
 const IS_RIGHT_TURN_CUTOFF_1 = -Math.PI - TOLERANCE;
 const IS_RIGHT_TURN_CUTOFF_2 = Math.PI - TOLERANCE;
@@ -8,6 +9,9 @@ const IS_RIGHT_TURN_CUTOFF_3 = -2 * Math.PI + TOLERANCE;
 const IS_RIGHT_TURN_CUTOFF_4 = 2 * Math.PI - TOLERANCE;
 
 function getIdString(id1: string, id2: string) {
+  //console.log("---------");
+  //console.log(id1);
+  //console.log(id2);
   if (id1 > id2) {
     return id2 + "-" + id1;
   } else {
@@ -44,6 +48,7 @@ class Node {
   clockwise(e: Edge) {
     const index = this.edges.indexOf(e);
     if (index == -1) {
+      console.log(this);
       throw new Error(
         `Edge ${e.from.id} -> ${e.to.id} not adjacent to vertex ${this.id}.`
       );
@@ -160,11 +165,11 @@ class Crease extends Edge {
       creaseType == CreaseType.InactiveHull
     ) {
       this.assignment = MVAssignment.Boundary;
-    } else if (creaseType == CreaseType.Gusset) {
+    } else if (creaseType == CreaseType.Gusset
+          || creaseType == CreaseType.Pseudohinge) {
       this.assignment = MVAssignment.Valley;
     } else if (
-      creaseType == CreaseType.Ridge ||
-      creaseType == CreaseType.Pseudohinge
+      creaseType == CreaseType.Ridge 
     ) {
       this.assignment = MVAssignment.Mountain;
     } else if (creaseType == CreaseType.Hinge) {
@@ -223,6 +228,7 @@ class Graph<N extends Node, E extends Edge> {
       );
       const angleDifference = fromAngle - otherEdgeAngle;
       if (Math.abs(angleDifference) < TOLERANCE) {
+        console.log(e);
         throw new Error(
           `Tried to add edge ${e.idString()} parallel to existing incident edge.`
         );
@@ -242,6 +248,7 @@ class Graph<N extends Node, E extends Edge> {
       );
       const angleDifference = toAngle - otherEdgeAngle;
       if (Math.abs(angleDifference) < TOLERANCE) {
+        console.log(e);
         throw new Error(
           `Tried to add edge parallel to existing incident edge.`
         );
@@ -256,6 +263,7 @@ class Graph<N extends Node, E extends Edge> {
 
   getEdge(v1: N, v2: N) {
     const idString = getIdString(v1.id, v2.id);
+    //console.log(`From getEdge: idString = ${idString}`);
     return this.edges.get(idString);
   }
 
@@ -335,7 +343,6 @@ enum CreasesGraphState {
   NewlyCreated,
   Clean,
   PreUMA,
-  MidUMA,
   PostUMA,
   FullyAssigned,
 }
@@ -365,6 +372,8 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
   }
 
   subdivideCrease(e: Crease, x: number, y: number) {
+    //console.log(`Subdividing crease at (${x}, ${y}).`);
+    //console.log(e);
     if (this.state != CreasesGraphState.PreUMA) {
       throw new Error(`Do not call subdivideCrease from state ${this.state}.`);
     }
@@ -393,10 +402,16 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
       leftFace.nodes.splice(indexOfToNodeInLeftFace, 0, newNode);
       rightFace.nodes.splice(indexOfFromNodeInRightFace, 0, newNode);
     }
+    //console.log(newNode.edges);
+    if (this.getEdge(newNode, fromNode) == undefined) {
+      console.log(this.edges);
+      throw new Error("Problem subdividing crease - cannot find one of the new edges.");
+    }
     return newNode;
   }
 
-  suppressNodeIfRedundant(v2: CreasesNode) {
+  suppressNodeIfRedundant(v2: CreasesNode, newCreases: Set<Crease>) {
+    //if (v2.id == "i11") console.log(v2.edges);
     if (this.state != CreasesGraphState.PreUMA) {
       throw new Error(
         `Do not call suppressRidgeNodeIfRedundant from state ${this.state}.`
@@ -405,8 +420,8 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
     if (v2.edges.length == 2) {
       const e2 = v2.edges[0] as Crease;
       const e3 = v2.edges[1] as Crease;
-      const v1 = e2.getOtherVertex(v2);
-      const v3 = e3.getOtherVertex(v2);
+      const v1 = e2.getOtherNode(v2) as CreasesNode;
+      const v3 = e3.getOtherNode(v2) as CreasesNode;
       const v2Angle = Math.atan2(v2.y - v1.y, v2.x - v1.x);
       const v3Angle = Math.atan2(v3.y - v1.y, v3.x - v1.x);
       const creaseType = e2.creaseType;
@@ -421,24 +436,14 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
             } and edge ${e3.idString()} is of type ${e3.creaseType}.`
           );
         }
-        const leftFace = (e2.from == v1 ? e2.leftFace : e2.rightFace) as Face;
-        const rightFace = (e2.from == v1 ? e2.rightFace : e2.leftFace) as Face;
-        if (leftFace == rightFace) {
-          throw new Error(
-            `Ridge node ${v2.id} adjacent to same face on both sides!`
-          );
-        }
+        newCreases.delete(e2);
+        newCreases.delete(e3);
         this.removeEdge(e2);
         this.removeEdge(e3);
         this.nodes.delete(v2.id);
         const newCrease = new Crease(v3, v1, creaseType);
+        newCreases.add(newCrease);
         this.addEdge(newCrease);
-        newCrease.leftFace = leftFace;
-        newCrease.rightFace = rightFace;
-        const v2IndexInLeftFace = leftFace.nodes.indexOf(v2);
-        leftFace.nodes.splice(v2IndexInLeftFace, 1);
-        const v2IndexInRightFace = rightFace.nodes.indexOf(v2);
-        rightFace.nodes.splice(v2IndexInRightFace, 1);
         return true;
       }
     }
@@ -458,12 +463,14 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
         e.rightFace = face;
       }
       if (e.creaseType == CreaseType.InactiveHull) {
-        if (face.inactiveHullEdge == null) {
-          face.inactiveHullEdge = e;
-        } else {
-          throw new Error(
-            `Face has at least two inactive hull edges: ${face.inactiveHullEdge.idString()} and ${e.idString()}.`
-          );
+        if (!face.isOuterFace) {
+          if (face.inactiveHullEdge == null) {
+            face.inactiveHullEdge = e;
+          } else {
+            throw new Error(
+              `Face ${face.nodes.map(n => n.id)} has at least two inactive hull edges: ${face.inactiveHullEdge.idString()} and ${e.idString()}.`
+            );
+          }
         }
       }
       v = e.getOtherNode(v) as CreasesNode;
@@ -494,6 +501,7 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
 
 export {
   TOLERANCE,
+  UPDATE_TOLERANCE,
   BINARY_SEARCH_TOLERANCE,
   IS_RIGHT_TURN_CUTOFF_1,
   IS_RIGHT_TURN_CUTOFF_2,
