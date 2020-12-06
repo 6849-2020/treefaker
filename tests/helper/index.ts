@@ -221,14 +221,14 @@ export function boneTree() {
 
 export function bonePacking() {
   const packing = new Packing();
-  packing.scaleFactor = 1/6;
+  packing.scaleFactor = 1 / 6;
   const v1 = new PackingNode("1", 0, 1);
   packing.nodes.set("1", v1);
-  const v2 = new PackingNode("2", 2/3, 1);
+  const v2 = new PackingNode("2", 2 / 3, 1);
   packing.nodes.set("2", v2);
   const v6 = new PackingNode("6", 0, 0);
   packing.nodes.set("6", v6);
-  const v7 = new PackingNode("7", 2/3, 0);
+  const v7 = new PackingNode("7", 2 / 3, 0);
   packing.nodes.set("7", v7);
   return packing;
 }
@@ -278,4 +278,75 @@ export function nullFromEdgeBugPacking() {
   const v7 = new PackingNode("7", 0, 0.67);
   packing.nodes.set("7", v7);
   return packing;
+}
+
+export function crabTree() {
+  // Crab design by Jason Ku shown in lecture.
+  const vertices = [
+    [0, 0],
+    [4.5, 0],
+    [6.5, 0],
+    [8.5, 0],
+    [13, 0],
+    [0, -2],
+    [1.5, -3.5],
+    [3, -4.5],
+    [13, -2],
+    [11.5, -3.5],
+    [10, -4.5],
+    [6.5, 3],
+    [8.5, 1],
+    [5.5, 4],
+    [6.5, 4.5],
+    [7.5, 4],
+    [4.5, 3],
+    [2.5, 5.5],
+    [4.5, 7],
+    [4, 6],
+    [8.5, 3],
+    [10.5, 5.5],
+    [8.5, 7],
+    [9, 6],
+  ];
+  const adjacency = [
+    [0, 1],
+    [1, 2],
+    [1, 5],
+    [1, 6],
+    [1, 7],
+    [2, 3],
+    [2, 11],
+    [3, 4],
+    [3, 8],
+    [3, 9],
+    [3, 10],
+    [11, 12],
+    [11, 13],
+    [11, 14],
+    [11, 15],
+    [11, 16],
+    [11, 20],
+    [16, 17],
+    [17, 18],
+    [17, 19],
+    [20, 21],
+    [21, 22],
+    [21, 23],
+  ];
+  const tree = new TreeGraph();
+  const nodes: TreeNode[] = [];
+  for (const [idx, coords] of vertices.entries()) {
+    const v = new TreeNode(idx.toString(), coords[0], coords[1]);
+    nodes.push(v);
+    tree.addNode(v);
+  }
+  for (const e of adjacency) {
+    const nodeFrom = nodes[e[0]];
+    const nodeTo = nodes[e[1]];
+    const length = Math.sqrt(
+      Math.pow(nodeFrom.x - nodeTo.x, 2) + Math.pow(nodeFrom.y - nodeTo.y, 2)
+    );
+    tree.addEdge(new TreeEdge(nodeFrom, nodeTo, length));
+  }
+  return tree;
 }
