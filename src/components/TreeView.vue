@@ -50,7 +50,7 @@ export default class TreeView extends Vue {
     this.treePoints.forEach(function(edges: any, point: any) {
       const px = point.X();
       const py = point.Y();
-      const v = new TreeNode(point.name, px, py);
+      const v = new TreeNode(point.name.toString(), px, py);
       tree.addNode(v);
       newPoints.set([px, py].toString(), v);
     });
