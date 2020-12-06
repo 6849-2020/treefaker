@@ -1,12 +1,32 @@
 <template>
   <div>
-    <nav class="navbar">
-      <img class="logo" src="../assets/img/TreeFakerLogo.svg" />
-    </nav>
-    <div class="container">
+  <b-navbar type="dark" variant="dark">
+    <b-navbar-nav>
+      <b-navbar-brand href="#">
+        <img class="logo" src="../assets/img/TreeFakerLogo.svg" />
+      </b-navbar-brand>
+
+      <b-nav-item-dropdown text="File" right>
+        <b-dropdown-item href="#" v-on:click="exportFold" :disabled=exportDisabled>Export to FOLD</b-dropdown-item>
+      </b-nav-item-dropdown>
+      <b-nav-item href="#" v-b-modal.modalPopover>About</b-nav-item>
+    </b-navbar-nav>
+  </b-navbar> 
+  
+  <b-modal id="modalPopover" title="About" size="lg" ok-only>
       <p class="description">
-        Welcome to TreeFaker, an online, lightweight version of Robert Lang's <a href=https://langorigami.com/article/treemaker/>TreeMaker</a>. To get started, draw a tree in the left box. <strong>Ctrl + drag</strong> a vertex to add a new leaf to the tree. <strong>Shift + click</strong> on an edge to delete it. <strong>Right click</strong> on an edge to manually set its length. When you are done drawing the tree, click <strong>Generate Disk Packing</strong>. When you are satisfied with the disk packing, click <strong>Get Crease Pattern</strong>.
+        Welcome to TreeFaker, an online, lightweight version of Robert Lang's <a href=https://langorigami.com/article/treemaker/>TreeMaker</a>. To get started:
+        <ol>
+          <li>Draw a tree in the left box. <strong>Ctrl + drag</strong> a vertex to add a new leaf to the tree. <strong>Shift + click</strong> on an edge to delete it. <strong>Right click</strong> on an edge to manually set its length.</li>
+          <li>When you are done drawing the tree, click <strong>Generate Disk Packing</strong>.
+          <li>When you are satisfied with the disk packing, click <strong>Get Crease Pattern</strong>.</li>
+          <li>To view the </li>
+        </ol>
       </p>
+      <p class="description">This tool was created by <a href="https://pjrule.me/" target="_blank">Parker Rule</a>, <a href="http://www.jamie.tuckerfoltz.com/" target="_blank">Jamie Tucker-Foltz</a>, and <a href="https://tck.mn/" target="_blank">Andy Tockman</a> as a final project for <a href="https://courses.csail.mit.edu/6.849/fall20/" target="_blank">6.849: Geometric Folding Algorithms</a> (MIT), fall 2020.</p>
+  </b-modal>
+
+    <div class="container">
       <table class="views">
         <tr class="threeViews">
           <td class="viewBoxTd"><TreeView ref="tree" /></td>
@@ -30,8 +50,8 @@
            </td>
           <td />
           <td>
-            <b-button variant="primary" size="lg" v-on:click="exportFold">
-              Export .FOLD File
+            <b-button variant="primary" size="lg" v-on:click="origamiSimulator" :disabled=exportDisabled>
+              Open in Origami Simulator
             </b-button>
          </td>
         </tr>
@@ -46,9 +66,13 @@ import { Component, Prop, Vue } from "vue-property-decorator";
 import TreeView from './TreeView.vue';
 import CreasesView from './CreasesView.vue';
 import PackingView from './PackingView.vue';
-import { BButton } from 'bootstrap-vue';
+import { BButton, ModalPlugin, NavbarPlugin } from 'bootstrap-vue';
+import { CreasesGraphState } from '../engine/packing';
 
 Vue.component('b-button', BButton);
+Vue.use(ModalPlugin);
+Vue.use(NavbarPlugin);
+ 
 
 @Component({
   components: {
@@ -66,7 +90,16 @@ export default class TreeFaker extends Vue {
     (this.$refs as any).creases.show();
   }
   exportFold() {
-    alert('TODO');
+    (this.$refs as any).creases.download();
+  }
+  origamiSimulator() {
+    (this.$refs as any).creases.origamiSimulator();
+  }
+  get exportDisabled() {
+    return (
+      (this.$store as any).state.creasesGraph === undefined ||
+      (this.$store as any).state.creasesGraph.state === CreasesGraphState.PreUMA
+    );
   }
 }
 </script>

@@ -30,6 +30,7 @@ describe("generateFold", function() {
     expect(fold.vertices_coords).to.have.lengthOf(nNodes);
     expect(fold.vertices_edges).to.have.lengthOf(nNodes);
     expect(fold.edges_vertices).to.have.lengthOf(nEdges);
+    expect(fold.edges_foldAngle).to.have.lengthOf(nEdges);
     expect(fold.edges_assignment).to.have.lengthOf(nEdges);
     expect(fold.faces_vertices).to.have.lengthOf(nFaces);
     expect(fold.faces_edges).to.have.lengthOf(nFaces);
@@ -74,6 +75,11 @@ describe("generateFold", function() {
     // Crease assignments should be within the set of possible values.
     for (const assignment of fold.edges_assignment) {
       expect(["M", "V", "U", "B"]).to.include(assignment);
+    }
+
+    // Fold angles should be within the set of possible values.
+    for (const angle of fold.edges_foldAngle) {
+      expect([0, -180, 180, null]).to.include(angle);
     }
   });
 });

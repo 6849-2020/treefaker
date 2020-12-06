@@ -5,6 +5,8 @@
 <script lang="ts">
 import { Component, Prop, Vue } from "vue-property-decorator";
 import { JSXGraph, Board } from "jsxgraph";
+import { saveAs } from "file-saver";
+import { generateFold } from "../engine/creases/export";
 import {
   TreeGraph,
   CreasesGraph,
@@ -31,6 +33,8 @@ function getColor(mv: MVAssignment): string {
 @Component
 export default class CreasesView extends Vue {
   creasesBoard: Board;
+  fold: object | undefined;
+  simulator: Window | null | undefined;
 
   mounted() {
     const creasesBoard = JSXGraph.initBoard("creasesViewBox", {
@@ -63,7 +67,10 @@ export default class CreasesView extends Vue {
     const points: Map<CreasesNode, any> = new Map();
     for (const v of creasesGraph.nodes.values()) {
       const vertexName = (v.id.charAt(0) == "i") ? "" : v.id;
-      const point = creasesBoard.create("point", [v.x, v.y], { name: vertexName, fixed: true });
+      const point = creasesBoard.create("point", [v.x, v.y], {
+        name: vertexName,
+        fixed: true
+      });
       points.set(v, point);
     }
     for (const edge of creasesGraph.edges.values()) {
@@ -79,6 +86,49 @@ export default class CreasesView extends Vue {
       });
     }
     this.creasesBoard = creasesBoard;
+    this.fold = generateFold(creasesGraph);
+  }
+
+  download() {
+    if (this.fold !== undefined) {
+      const blob = new Blob([JSON.stringify(this.fold)], {
+        type: "application.json;charset=utf-8"
+      });
+      saveAs(blob, "treefaker.fold");
+    }
+  }
+
+  origamiSimulator() {
+    if (this.fold !== undefined) {
+      if (
+        this.simulator !== null &&
+        this.simulator !== undefined &&
+        !this.simulator.closed
+      ) {
+        this.simulator.focus();
+      } else {
+        this.simulator = window.open(
+          "https://origamisimulator.org/?model=treefaker"
+        );
+      }
+      const fold = this.fold;
+      const simulator = this.simulator;
+      window.addEventListener('message', function(e) {
+        if (
+          simulator !== null &&
+          e.source === simulator &&
+          e.data &&
+          e.data.from === "OrigamiSimulator" &&
+          e.data.status === "ready"
+        ) {
+          console.log("posting...");
+          simulator.postMessage({ op: "importFold", fold: fold }, "*");
+        }
+      });
+    }
   }
 }
+
+
+
 </script>
