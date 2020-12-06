@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "core-js": "^3.6.5",
+    "file-saver": "^2.0.5",
     "jsxgraph": "^1.1.0",
     "mathjs": "^8.0.1",
     "vue": "^2.6.11",
