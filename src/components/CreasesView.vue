@@ -72,7 +72,7 @@ export default class CreasesView extends Vue {
     } catch (err) {
       this.$store.commit(
         "updateGlobalError",
-        "Couldn't build faces. (" + err.message + ")"
+        "Could not build faces. (" + err.message + ")"
       );
       return;
     }
@@ -81,7 +81,7 @@ export default class CreasesView extends Vue {
     } catch (err) {
       this.$store.commit(
         "updateGlobalError",
-        "Couldn't generate molecules. (" + err.message + ")"
+        "Could not generate molecules. (" + err.message + ")"
       );
       return;
     }
