@@ -9,11 +9,17 @@
       <b-nav-item-dropdown text="File" right>
         <b-dropdown-item href="#" v-on:click="exportFold" :disabled=exportDisabled>Export to FOLD</b-dropdown-item>
       </b-nav-item-dropdown>
-      <b-nav-item href="#" v-b-modal.modalPopover>About</b-nav-item>
+      <b-nav-item href="#" v-b-modal.controlsPopover>Controls</b-nav-item>
+      <b-nav-item href="#" v-b-modal.aboutPopover>About</b-nav-item>
     </b-navbar-nav>
   </b-navbar> 
   
-  <b-modal id="modalPopover" title="About" size="lg" ok-only>
+  <b-modal id="aboutPopover" title="About" size="lg" ok-only>
+      <p class="description">This tool was created by <a href="https://pjrule.me/" target="_blank">Parker Rule</a> and <a href="http://www.jamie.tuckerfoltz.com/" target="_blank">Jamie Tucker-Foltz</a> as a final project for <a href="https://courses.csail.mit.edu/6.849/fall20/" target="_blank">6.849: Geometric Folding Algorithms</a> (MIT), fall 2020.</p>
+      <p class="description">We are grateful for the guidance of Erik Demaine and Robert Lang.</p>
+  </b-modal>
+
+  <b-modal id="controlsPopover" title="Controls" size="lg" ok-only>
       <p class="description">
         Welcome to TreeFaker, an online, lightweight version of Robert Lang's <a href="https://langorigami.com/article/treemaker/" target="_blank">TreeMaker</a>. To get started:
         <ol>
@@ -23,8 +29,8 @@
           <li>To export the crease pattern, click <strong>Open in Origami Simulator</strong> or <strong>File > Export FOLD</strong>.</li>
         </ol>
       </p>
-      <p class="description">This tool was created by <a href="https://pjrule.me/" target="_blank">Parker Rule</a>, <a href="http://www.jamie.tuckerfoltz.com/" target="_blank">Jamie Tucker-Foltz</a>, and <a href="https://tck.mn/" target="_blank">Andy Tockman</a> as a final project for <a href="https://courses.csail.mit.edu/6.849/fall20/" target="_blank">6.849: Geometric Folding Algorithms</a> (MIT), fall 2020.</p>
   </b-modal>
+
 
     <div class="container">
       <b-alert :show=inErrorState variant="danger"><p>{{ errorMessage }}</p></b-alert>
