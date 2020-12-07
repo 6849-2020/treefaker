@@ -6,7 +6,8 @@
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
     "test:unit": "vue-cli-service test:unit",
-    "lint": "vue-cli-service lint"
+    "lint": "vue-cli-service lint",
+    "deploy": "node scripts/gh-deploy.js"
   },
   "dependencies": {
     "bootstrap": "^4.5.3",
@@ -39,7 +40,8 @@
     "eslint-plugin-vue": "^6.2.2",
     "prettier": "^1.19.1",
     "typescript": "~3.9.3",
-    "vue-template-compiler": "^2.6.11"
+    "vue-template-compiler": "^2.6.11",
+    "execa": "4.1.0"
   },
   "eslintConfig": {
     "root": true,
