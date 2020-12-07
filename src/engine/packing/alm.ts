@@ -37,10 +37,10 @@ type Step = {
 const WEIGHT_START = 10;
 const WEIGHT_RATIO = 10;
 const WEIGHT_MAX = 1e8;
-const ITERS_OUTER = 20;
+const ITERS_OUTER = 50;
 
 // Inner search parameters
-const ITERS_INNER = 50;
+const ITERS_INNER = 100;
 // How much (relatively) does the objective value need to decrease
 // to terminate an instance of line search?
 const ALF = 1e-4;

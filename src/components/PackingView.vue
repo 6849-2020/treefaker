@@ -6,7 +6,7 @@
 import Vuex from "vuex";
 import { Component, Prop, Vue } from "vue-property-decorator";
 import { JSXGraph, Board } from "jsxgraph";
-import { zeros, size, random, add, multiply } from "mathjs";
+import { zeros, size, random, add, multiply, matrix } from "mathjs";
 import { Packing, PackingNode, CreasesGraph } from "../engine/packing";
 import {
   genConstraints,
@@ -94,8 +94,8 @@ export default class PackingView extends Vue {
     // Generate a (not necessarily optimal) disk packing.
     // If the solver fails to converge, perturb the problem slightly and retry.
     return new Promise(resolve => {
-      let sol = solve(initSol, distanceMatrix, constraints);
-      for (let trial = 0; trial < 5 && sol === undefined; trial++) {
+      let sol: matrix | undefined = undefined;
+      for (let trial = 0; trial <= 5 && sol === undefined; trial++) {
         const perturbedDists = add(
           distanceMatrix,
           multiply(PERTURB_EPS, random(size(distanceMatrix)))
