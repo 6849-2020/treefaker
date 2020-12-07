@@ -47,6 +47,11 @@ export default class CreasesView extends Vue {
   }
 
   show() {
+    if ((this.$store.state as any).packingCreasesSynced === true) {
+      return; // No need to update.
+    }
+
+    this.$store.commit("clearGlobalError");
     const creasesBoard = JSXGraph.initBoard("creasesViewBox", {
       boundingbox: [-0.1, 1.1, 1.1, -0.1],
       showCopyright: false,
@@ -62,8 +67,24 @@ export default class CreasesView extends Vue {
 
     // TODO (@pjrule): the UMA functions mutate objects in place, so we
     // should make deep copies here to avoid inadvertently mutating global state.
-    buildFaces(creasesGraph);
-    generateMolecules(creasesGraph, distances, packing.scaleFactor);
+    try {
+      buildFaces(creasesGraph);
+    } catch (err) {
+      this.$store.commit(
+        "updateGlobalError",
+        "Couldn't build faces. (" + err.message + ")"
+      );
+      return;
+    }
+    try {
+      generateMolecules(creasesGraph, distances, packing.scaleFactor);
+    } catch (err) {
+      this.$store.commit(
+        "updateGlobalError",
+        "Couldn't generate molecules. (" + err.message + ")"
+      );
+      return;
+    }
     const points: Map<CreasesNode, any> = new Map();
     for (const v of creasesGraph.nodes.values()) {
       const vertexName = (v.id.charAt(0) == "i") ? "" : v.id;
@@ -87,6 +108,7 @@ export default class CreasesView extends Vue {
     }
     this.creasesBoard = creasesBoard;
     this.fold = generateFold(creasesGraph);
+    this.$store.commit("sync");
   }
 
   download() {

@@ -18,6 +18,8 @@ export type RootState = {
   treeGraph: TreeGraph | undefined;
   creasesGraph: CreasesGraph | undefined;
   packing: Packing | undefined;
+  globalError: string | undefined;
+  packingCreasesSynced: boolean;
 };
 
 const storeTemplate: StoreOptions<RootState> = {
@@ -30,6 +32,8 @@ const storeTemplate: StoreOptions<RootState> = {
     creasesGraph: undefined,
 
     packing: undefined,
+    globalError: undefined,
+    packingCreasesSynced: false,
   },
   mutations: {
     updateTreeGraph(state, graph: TreeGraph) {
@@ -40,6 +44,18 @@ const storeTemplate: StoreOptions<RootState> = {
     },
     updatePacking(state, packing: Packing) {
       state.packing = packing;
+    },
+    updateGlobalError(state, msg: string) {
+      state.globalError = msg;
+    },
+    clearGlobalError(state) {
+      state.globalError = undefined;
+    },
+    unsync(state) {
+      state.packingCreasesSynced = false;
+    },
+    sync(state) {
+      state.packingCreasesSynced = true;
     },
   },
 };

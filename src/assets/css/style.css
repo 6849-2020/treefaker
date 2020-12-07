@@ -17,7 +17,7 @@ body {
   margin-top: 10px;
 }
 
-.navbar-nav {
+.navbar {
   background-color: #3e3e3e;
 }
 
@@ -83,4 +83,13 @@ table.views {
 
 .modal-title {
   font-weight: 700;
+}
+
+.alert {
+  margin: 0 auto 20px auto;
+  max-width: 450px;
+}
+
+.alert p {
+  margin: 0.3rem 0;
 }

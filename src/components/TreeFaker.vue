@@ -15,18 +15,20 @@
   
   <b-modal id="modalPopover" title="About" size="lg" ok-only>
       <p class="description">
-        Welcome to TreeFaker, an online, lightweight version of Robert Lang's <a href=https://langorigami.com/article/treemaker/>TreeMaker</a>. To get started:
+        Welcome to TreeFaker, an online, lightweight version of Robert Lang's <a href="https://langorigami.com/article/treemaker/" target="_blank">TreeMaker</a>. To get started:
         <ol>
           <li>Draw a tree in the left box. <strong>Ctrl + drag</strong> a vertex to add a new leaf to the tree. <strong>Shift + click</strong> on an edge to delete it. <strong>Right click</strong> on an edge to manually set its length.</li>
           <li>When you are done drawing the tree, click <strong>Generate Disk Packing</strong>.
           <li>When you are satisfied with the disk packing, click <strong>Get Crease Pattern</strong>.</li>
-          <li>To view the </li>
+          <li>To export the crease pattern, click <strong>Open in Origami Simulator</strong> or <strong>File > Export FOLD</strong>.</li>
         </ol>
       </p>
       <p class="description">This tool was created by <a href="https://pjrule.me/" target="_blank">Parker Rule</a>, <a href="http://www.jamie.tuckerfoltz.com/" target="_blank">Jamie Tucker-Foltz</a>, and <a href="https://tck.mn/" target="_blank">Andy Tockman</a> as a final project for <a href="https://courses.csail.mit.edu/6.849/fall20/" target="_blank">6.849: Geometric Folding Algorithms</a> (MIT), fall 2020.</p>
   </b-modal>
 
     <div class="container">
+      <b-alert :show=inErrorState variant="danger"><p>{{ errorMessage }}</p></b-alert>
+
       <table class="views">
         <tr class="threeViews">
           <td class="viewBoxTd"><TreeView ref="tree" /></td>
@@ -44,7 +46,7 @@
           </td>
           <td />
           <td>
-            <b-button variant="primary" size="lg" v-on:click="getCreasePattern">
+            <b-button variant="primary" size="lg" v-on:click="getCreasePattern" :disabled=creasesDisabled>
               Get Crease Pattern
             </b-button>
            </td>
@@ -66,14 +68,14 @@ import { Component, Prop, Vue } from "vue-property-decorator";
 import TreeView from './TreeView.vue';
 import CreasesView from './CreasesView.vue';
 import PackingView from './PackingView.vue';
-import { BButton, ModalPlugin, NavbarPlugin } from 'bootstrap-vue';
+import { BAlert, BButton, ModalPlugin, NavbarPlugin } from 'bootstrap-vue';
 import { CreasesGraphState } from '../engine/packing';
 
+Vue.component('b-alert', BAlert)
 Vue.component('b-button', BButton);
 Vue.use(ModalPlugin);
 Vue.use(NavbarPlugin);
  
-
 @Component({
   components: {
     TreeView,
@@ -95,11 +97,20 @@ export default class TreeFaker extends Vue {
   origamiSimulator() {
     (this.$refs as any).creases.origamiSimulator();
   }
+  get creasesDisabled() {
+      return (this.$store as any).state.creasesGraph === undefined;
+  }
   get exportDisabled() {
     return (
       (this.$store as any).state.creasesGraph === undefined ||
-      (this.$store as any).state.creasesGraph.state === CreasesGraphState.PreUMA
+      (this.$store as any).state.creasesGraph.state !== CreasesGraphState.PostUMA
     );
+  }
+  get inErrorState() {
+    return (this.$store as any).state.globalError !== undefined;
+  }
+  get errorMessage() {
+    return (this.$store as any).state.globalError;
   }
 }
 </script>

@@ -25,7 +25,7 @@ export default class PackingView extends Vue {
     this.packingBoard = null;
   }
 
-  mounted() {
+  clear() {
     const packingBoard = JSXGraph.initBoard("packingViewBox", {
       boundingbox: [-0.05, 1.05, 1.05, -0.05],
       showCopyright: false,
@@ -35,9 +35,15 @@ export default class PackingView extends Vue {
     this.packingBoard = packingBoard;
   }
 
+  mounted() {
+    this.clear();
+  }
+
   pack() {
     // TODO (@pjrule): this is not strictly view code and should
     // almost certainly be moved to the engine (perhaps as a method of `Packing`).
+    this.$store.commit("clearGlobalError");
+    this.clear();
     const PERTURB_EPS = 1e-3;
 
     // Construct the optimization problem.
@@ -53,12 +59,21 @@ export default class PackingView extends Vue {
       }
     });
     const distances = (this.$store.state as any).treeGraph.getDistances();
+    if (leaves.size === distances.size) {
+      this.$store.commit(
+        "updateGlobalError",
+        "Add at least one non-leaf vertex to the tree."
+      );
+      return;
+    }
+
     const leafDistances = new Map();
     distances.forEach(function(dists: Map<string, Map<string, Map<string, number>>>, key: string) {
       if (leaves.has(key)) {
         leafDistances.set(key, dists);
       }
     });
+    
 
     console.log("distances:", leafDistances);
     const distanceMatrix = toMatrix(leafDistances);
@@ -100,8 +115,11 @@ export default class PackingView extends Vue {
       sol = solve(perturbedInitSol, perturbedDists, perturbedConstraints);
     }
     if (sol === undefined) {
-      alert("couldn't solve :(");
-      return; // give up. :(
+      this.$store.commit(
+        "updateGlobalError",
+        "Could not generate disk packing from tree."
+      );
+      return;
     }
 
     const packing = new Packing();
@@ -115,14 +133,12 @@ export default class PackingView extends Vue {
     }
 
     // Clean up the packing to enforce active path invariants.
-    this.$store.commit(
-      "updatePacking",
-      packing
-    );
+    this.$store.commit("updatePacking", packing);
     this.$store.commit(
       "updateCreasesGraph",
       cleanPacking(packing, leafDistances)
     );
+    this.$store.commit("unsync");
 
     // Display the packing.
     // TODO (@pjrule): would it be more efficient to reuse the old board?
