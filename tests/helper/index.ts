@@ -13,7 +13,7 @@ import {
   Graph,
   TreeGraph,
   CreasesGraphState,
-  CreasesGraph,
+  CreasesGraph
 } from "../../src/engine/packing";
 
 export function fiveStarTree() {
@@ -92,7 +92,7 @@ export function threeNodeSuboptimalTree() {
 export function threeNodeSuboptimalPacking() {
   return starPacking(1 / 16, [
     [1, 0],
-    [11.5 / 16, 6 / 16],
+    [11.5 / 16, 6 / 16]
   ]);
 }
 
@@ -111,7 +111,7 @@ export function tenStarSuboptimalPacking() {
     [0, 0],
     [5 / 16, 0],
     [9 / 16, 0],
-    [1, 0],
+    [1, 0]
   ]);
 }
 
@@ -123,7 +123,7 @@ export function rabbitEarOnSidePacking() {
   return starPacking(1 / 8, [
     [1, 1 / 2],
     [5 / 8, 0],
-    [5 / 8, 1],
+    [5 / 8, 1]
   ]);
 }
 
@@ -306,7 +306,7 @@ export function crabTree() {
     [8.5, 3],
     [10.5, 5.5],
     [8.5, 7],
-    [9, 6],
+    [9, 6]
   ];
   const adjacency = [
     [0, 1],
@@ -331,7 +331,7 @@ export function crabTree() {
     [17, 19],
     [20, 21],
     [21, 22],
-    [21, 23],
+    [21, 23]
   ];
   const tree = new TreeGraph();
   const nodes: TreeNode[] = [];
