@@ -108,7 +108,7 @@ export function genConstraints(dists: matrix): Constraint[] {
     ubConstraint(2 * n, MAX_SCALE),
     ...lbConstraints,
     ...ubConstraints,
-    ...overlapConstraints,
+    ...overlapConstraints
   ];
 }
 
@@ -131,7 +131,7 @@ export function genGradConstraints(dists: matrix): GradConstraint[] {
     gradUbConstraint(2 * n, MAX_SCALE, 2 * n + 1),
     ...gradLbConstraints,
     ...gradUbConstraints,
-    ...gradOverlapConstraints,
+    ...gradOverlapConstraints
   ];
 }
 

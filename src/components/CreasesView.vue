@@ -59,9 +59,9 @@ export default class CreasesView extends Vue {
     });
     creasesBoard.create("grid", []);
 
-
     const treeGraph = (this.$store.state as any).treeGraph as TreeGraph;
-    const creasesGraph = (this.$store.state as any).creasesGraph as CreasesGraph;
+    const creasesGraph = (this.$store.state as any)
+      .creasesGraph as CreasesGraph;
     const distances = treeGraph.getDistances();
     const packing = (this.$store.state as any).packing as Packing;
 
@@ -87,7 +87,7 @@ export default class CreasesView extends Vue {
     }
     const points: Map<CreasesNode, any> = new Map();
     for (const v of creasesGraph.nodes.values()) {
-      const vertexName = (v.id.charAt(0) == "i") ? "" : v.id;
+      const vertexName = v.id.charAt(0) == "i" ? "" : v.id;
       const point = creasesBoard.create("point", [v.x, v.y], {
         name: vertexName,
         fixed: true
@@ -135,7 +135,7 @@ export default class CreasesView extends Vue {
       }
       const fold = this.fold;
       const simulator = this.simulator;
-      window.addEventListener('message', function(e) {
+      window.addEventListener("message", function(e) {
         if (
           simulator !== null &&
           e.source === simulator &&
@@ -150,7 +150,4 @@ export default class CreasesView extends Vue {
     }
   }
 }
-
-
-
 </script>

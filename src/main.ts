@@ -33,7 +33,7 @@ const storeTemplate: StoreOptions<RootState> = {
 
     packing: undefined,
     globalError: undefined,
-    packingCreasesSynced: false,
+    packingCreasesSynced: false
   },
   mutations: {
     updateTreeGraph(state, graph: TreeGraph) {
@@ -56,13 +56,13 @@ const storeTemplate: StoreOptions<RootState> = {
     },
     sync(state) {
       state.packingCreasesSynced = true;
-    },
-  },
+    }
+  }
 };
 
 const store = new Vuex.Store<RootState>(storeTemplate);
 
 new Vue({
-  render: (h) => h(App),
-  store: store,
+  render: h => h(App),
+  store: store
 }).$mount("#app");

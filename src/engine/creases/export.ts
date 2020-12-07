@@ -32,7 +32,7 @@ export function generateFold(graph: CreasesGraph) {
 
   const vertexOrder = Array.from(graph.nodes.keys()).sort();
   const edgeOrder = Array.from(graph.edges.keys()).sort();
-  const vertexEdges: number[][] = vertexOrder.map((x) => []);
+  const vertexEdges: number[][] = vertexOrder.map(x => []);
 
   for (const vid of vertexOrder) {
     const node = graph.nodes.get(vid) as CreasesNode;
@@ -94,6 +94,6 @@ export function generateFold(graph: CreasesGraph) {
     edges_foldAngle: angles,
     vertices_edges: vertexEdges,
     faces_vertices: faceVertices,
-    faces_edges: faceEdges,
+    faces_edges: faceEdges
   };
 }

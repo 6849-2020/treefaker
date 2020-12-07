@@ -1,7 +1,46 @@
 import { expect } from "chai";
-import { Node, Edge, Face, TreeNode, TreeEdge, PackingNode, Packing, CreasesNode, CreaseType, MVAssignment, Crease, Graph, TreeGraph, CreasesGraphState, CreasesGraph, TOLERANCE }  from "../../src/engine/packing";
-import { cleanPacking, buildFaces, generateMolecules, subdivideCreasesInitial } from "../../src/engine/creases";
-import { fiveStarTree, fiveStarPacking, threeNodeSuboptimalTree, threeNodeSuboptimalPacking, tenStarSuboptimalTree, tenStarSuboptimalPacking, twoNodeTree, twoNodeAdjacentCornersPacking, rabbitEarOnSideTree, rabbitEarOnSidePacking, demaineLangPaperSmallTree, demaineLangPaperSmallPacking, boneTree, bonePacking, nullFromEdgeBugTree, nullFromEdgeBugPacking } from "../helper";
+import {
+  Node,
+  Edge,
+  Face,
+  TreeNode,
+  TreeEdge,
+  PackingNode,
+  Packing,
+  CreasesNode,
+  CreaseType,
+  MVAssignment,
+  Crease,
+  Graph,
+  TreeGraph,
+  CreasesGraphState,
+  CreasesGraph,
+  TOLERANCE
+} from "../../src/engine/packing";
+import {
+  cleanPacking,
+  buildFaces,
+  generateMolecules,
+  subdivideCreasesInitial
+} from "../../src/engine/creases";
+import {
+  fiveStarTree,
+  fiveStarPacking,
+  threeNodeSuboptimalTree,
+  threeNodeSuboptimalPacking,
+  tenStarSuboptimalTree,
+  tenStarSuboptimalPacking,
+  twoNodeTree,
+  twoNodeAdjacentCornersPacking,
+  rabbitEarOnSideTree,
+  rabbitEarOnSidePacking,
+  demaineLangPaperSmallTree,
+  demaineLangPaperSmallPacking,
+  boneTree,
+  bonePacking,
+  nullFromEdgeBugTree,
+  nullFromEdgeBugPacking
+} from "../helper";
 
 describe("subdivideCreasesInitial", function() {
   it("works on small example from paper", function() {
@@ -10,14 +49,27 @@ describe("subdivideCreasesInitial", function() {
     const d = tree.getDistances();
     const g = cleanPacking(p, d);
     buildFaces(g);
-    const [z, inactiveHullCreases] = subdivideCreasesInitial(g, d, p.scaleFactor);
+    const [z, inactiveHullCreases] = subdivideCreasesInitial(
+      g,
+      d,
+      p.scaleFactor
+    );
     const v1 = g.nodes.get("1") as CreasesNode;
     const v2 = g.nodes.get("2") as CreasesNode;
     const v5 = g.nodes.get("5") as CreasesNode;
     const v6 = g.nodes.get("6") as CreasesNode;
-    const zDistances12 = (z.get(v1) as Map<CreasesNode, Array<[string, number, CreasesNode | null]>>).get(v2) as Array<[string, number, CreasesNode | null]>;
-    const zDistances15 = (z.get(v1) as Map<CreasesNode, Array<[string, number, CreasesNode | null]>>).get(v5) as Array<[string, number, CreasesNode | null]>;
-    const zDistances16 = (z.get(v1) as Map<CreasesNode, Array<[string, number, CreasesNode | null]>>).get(v6) as Array<[string, number, CreasesNode | null]>;
+    const zDistances12 = (z.get(v1) as Map<
+      CreasesNode,
+      Array<[string, number, CreasesNode | null]>
+    >).get(v2) as Array<[string, number, CreasesNode | null]>;
+    const zDistances15 = (z.get(v1) as Map<
+      CreasesNode,
+      Array<[string, number, CreasesNode | null]>
+    >).get(v5) as Array<[string, number, CreasesNode | null]>;
+    const zDistances16 = (z.get(v1) as Map<
+      CreasesNode,
+      Array<[string, number, CreasesNode | null]>
+    >).get(v6) as Array<[string, number, CreasesNode | null]>;
     expect(zDistances12.length).to.equal(2);
     expect(zDistances15.length).to.equal(1);
     expect(zDistances16.length).to.equal(3);
@@ -43,7 +95,7 @@ describe("generateMolecules", function() {
     expect(centralNode.y).to.equal(0.5);
     expect(g.nodes.get("i6")).to.be.undefined;
   });
-  
+
   it("works on isosceles triangle (makes rabbit ear)", function() {
     const tree = rabbitEarOnSideTree();
     const p = rabbitEarOnSidePacking();
@@ -60,7 +112,7 @@ describe("generateMolecules", function() {
     expect(centralNode.y).to.be.closeTo(0.5, TOLERANCE);
     expect(g.nodes.get("i5")).to.be.undefined;
   });
-  
+
   it("works on bone, which makes exactly 2 inset nodes in one step", function() {
     const tree = boneTree();
     const p = bonePacking();
@@ -72,12 +124,23 @@ describe("generateMolecules", function() {
     expect(g.edges.size).to.equal(26);
     expect(g.faces.size).to.equal(13);
     const centralNode = g.nodes.get("i11") as CreasesNode;
-    expect(centralNode.x).to.be.closeTo(1/3, TOLERANCE);
-    expect(centralNode.y).to.be.closeTo(1/2, TOLERANCE);
-    expect(Array.from(centralNode.edges).map(e => e.creaseType).sort().map(c => CreaseType[c]))
-        .to.eql([CreaseType.Ridge, CreaseType.Ridge, CreaseType.Hinge, CreaseType.Hinge].map(c => CreaseType[c]));
+    expect(centralNode.x).to.be.closeTo(1 / 3, TOLERANCE);
+    expect(centralNode.y).to.be.closeTo(1 / 2, TOLERANCE);
+    expect(
+      Array.from(centralNode.edges)
+        .map(e => e.creaseType)
+        .sort()
+        .map(c => CreaseType[c])
+    ).to.eql(
+      [
+        CreaseType.Ridge,
+        CreaseType.Ridge,
+        CreaseType.Hinge,
+        CreaseType.Hinge
+      ].map(c => CreaseType[c])
+    );
   });
-  
+
   it("works on small example from paper", function() {
     const tree = demaineLangPaperSmallTree();
     const p = demaineLangPaperSmallPacking();
@@ -90,7 +153,7 @@ describe("generateMolecules", function() {
     expect(g.edges.size).to.equal(55);
     expect(g.faces.size).to.equal(27);
   });
-  
+
   it("does not throw error on 10-leaf star tree", function() {
     const tree = tenStarSuboptimalTree();
     const p = tenStarSuboptimalPacking();
@@ -99,7 +162,7 @@ describe("generateMolecules", function() {
     buildFaces(g);
     generateMolecules(g, d, p.scaleFactor);
   });
-  
+
   it("does not throw error on example that generated null internal node bug", function() {
     const tree = demaineLangPaperSmallTree();
     const p = demaineLangPaperSmallPacking();
