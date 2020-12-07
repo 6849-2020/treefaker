@@ -296,6 +296,7 @@ export default class TreeView extends Vue {
         this.adjustVerts = undefined;
         this.adjustPt = undefined;
         this.adjustAngle = undefined;
+        this.setUndoPoint();
       }
       else if (e.shiftKey) this.deleteSubtree(point1, point2);
     }.bind(this));
