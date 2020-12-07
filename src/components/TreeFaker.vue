@@ -23,7 +23,7 @@
       <p class="description">
         Welcome to TreeFaker, an online, lightweight version of Robert Lang's <a href="https://langorigami.com/article/treemaker/" target="_blank">TreeMaker</a>. To get started:
         <ol>
-          <li>Draw a tree in the left box. <strong>Ctrl + drag</strong> a vertex to add a new leaf to the tree. <strong>Alt + drag</strong> an edge to adjust the tree without changing edge lengths, or <strong>Alt + Ctrl + drag</strong> to fix the orientation of the subtree. <strong>Shift + click</strong> on an edge to delete it. <strong>Right click</strong> on an edge to manually set its length.</li>
+          <li>Draw a tree in the left box. <strong>Ctrl + drag</strong> a vertex to add a new leaf to the tree. <strong>Alt + drag</strong> an edge to adjust the tree without changing edge lengths, or <strong>Alt + Ctrl + drag</strong> to fix the orientation of the subtree. <strong>Shift + click</strong> on an edge to delete it. <strong>Right click</strong> on an edge to manually set its length. Press <strong>Ctrl + Z</strong> or <strong>Ctrl + Y</strong> to undo or redo.</li>
           <li>When you are done drawing the tree, click <strong>Generate Disk Packing</strong>.
           <li>When you are satisfied with the disk packing, click <strong>Get Crease Pattern</strong>.</li>
           <li>To export the crease pattern, click <strong>Open in Origami Simulator</strong> or <strong>File > Export FOLD</strong>.</li>
