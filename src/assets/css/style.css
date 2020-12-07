@@ -93,3 +93,14 @@ table.views {
 .alert p {
   margin: 0.3rem 0;
 }
+
+.loadingBox {
+  width: 100%;
+  height: 100%;
+}
+
+.loadingSpinner {
+  width: 3rem;
+  height: 3rem;
+  margin: 0 auto;
+}

@@ -37,10 +37,10 @@ type Step = {
 const WEIGHT_START = 10;
 const WEIGHT_RATIO = 10;
 const WEIGHT_MAX = 1e8;
-const ITERS_OUTER = 50;
+const ITERS_OUTER = 20;
 
 // Inner search parameters
-const ITERS_INNER = 200;
+const ITERS_INNER = 50;
 // How much (relatively) does the objective value need to decrease
 // to terminate an instance of line search?
 const ALF = 1e-4;
@@ -48,7 +48,7 @@ const ALF = 1e-4;
 // Convergence tolerances.
 const EPS = Number.EPSILON;
 const X_TOL = 4 * EPS;
-const G_TOL = 1e-4;
+const G_TOL = 1e-5;
 
 function maxStepSize(X: matrix): number {
   // We assume that each of the `n` points has an associated
@@ -168,7 +168,9 @@ export function rescaleSol(X: matrix, dists: matrix): matrix {
     }
   }
   const ratio =
-    min(flatten(dotDivide(packingDists, dists)).filter((x) => !isNaN(x))) / 2;
+    min(
+      flatten(dotDivide(packingDists, dists)).filter((x: number) => !isNaN(x))
+    ) / 2;
   return [...xCoords, ...yCoords, ratio];
 }
 
@@ -289,7 +291,7 @@ function minimizeAugLag(
   );
   let hessInv = diag(ones([size(last.grad)[0]]));
   for (let iter = 1; iter <= ITERS_INNER; iter++) {
-    //console.log("\t--- inner iteration", iter, '---');
+    //console.log("\t--- inner iteration", iter, "---");
     const nextStep = lineSearch(
       lastStep,
       searchDirection,
@@ -297,7 +299,7 @@ function minimizeAugLag(
       mult,
       weight
     );
-    //console.log('\t', nextStep);
+    //console.log("\t", nextStep);
     if (nextStep === undefined) {
       // Something went wrong in the inner optimization step.
       // Propagate the error upward.
@@ -318,7 +320,7 @@ function minimizeAugLag(
 
     // Test for convergence to zero gradient.
     const gTest =
-      min(
+      max(
         multiply(
           abs(nextStep.grad),
           max([abs(nextStep.X), ones([size(nextStep.X)[0]])], 0)
@@ -331,9 +333,9 @@ function minimizeAugLag(
     // Compute dot products used in Hessian update denominators.
     const gradDelta = subtract(nextStep.grad, lastStep.grad);
     const hdg = multiply(hessInv, gradDelta);
-    const fac = dot(lastStep.grad, searchDirection);
-    const fae = dot(lastStep.grad, hdg);
-    const sumDg = Math.pow(norm(lastStep.grad), 2);
+    const fac = dot(gradDelta, searchDirection);
+    const fae = dot(gradDelta, hdg);
+    const sumDg = Math.pow(norm(gradDelta), 2);
     const sumXi = Math.pow(norm(searchDirection), 2);
 
     // Update the inverse Hessian.
@@ -344,13 +346,14 @@ function minimizeAugLag(
         multiply(facInv, searchDirection),
         multiply(fad, hdg)
       );
-      hessInv = subtract(
+      const hessInvDelta = subtract(
         add(
           multiply(facInv, outer(searchDirection, searchDirection)),
           multiply(fae, outer(dg, dg))
         ),
         multiply(fad, outer(hdg, hdg))
       );
+      hessInv = add(hessInv, hessInvDelta);
     }
     searchDirection = multiply(hessInv, multiply(-1, nextStep.grad));
     lastStep = nextStep;
@@ -376,14 +379,14 @@ export function solve(
   let bestSol: matrix | undefined = undefined;
 
   for (let iter = 0; iter < ITERS_OUTER; iter++) {
-    console.log("--- outer iteration", iter, "---");
+    //console.log("--- outer iteration", iter, "---");
     const unscaledNextStep = minimizeAugLag(
       lastStep,
       constraints,
       mult,
       weight
     );
-    console.log("unscaled:", unscaledNextStep);
+    //console.log("unscaled:", unscaledNextStep);
     if (unscaledNextStep === undefined) {
       // Something went wrong in the inner optimization step. :(
       return undefined;
@@ -404,15 +407,15 @@ export function solve(
     // (For our first version, we are primarily concerned with
     //  maximizing the scale factor.)
     const nextObjVal = -nextStep.X[size(nextStep.X)[0] - 1];
-    console.log("\tfeasibility:", feasibility);
-    console.log("\tobj:", nextObjVal);
+    //console.log("\tfeasibility:", feasibility);
+    //console.log("\tobj:", nextObjVal);
 
     if (iter > 0 && feasibility < G_TOL && bestObjVal > nextObjVal) {
       // Terminate if the solution is feasible and has converged
       // to a local minimum.
       bestSol = nextStep.X;
       bestObjVal = nextObjVal;
-      console.log("new best feasible solution found");
+      //console.log("new best feasible solution found");
     }
     weight = Math.min(weight * WEIGHT_RATIO, WEIGHT_MAX);
     lastStep = nextStep;

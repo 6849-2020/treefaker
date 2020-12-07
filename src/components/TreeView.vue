@@ -46,7 +46,6 @@ export default class TreeView extends Vue {
     const newPoints = new Map();
 
     // Generate nodes.
-    console.log(this.treePoints);
     this.treePoints.forEach(function(edges: any, point: any) {
       const px = point.X();
       const py = point.Y();
@@ -65,8 +64,6 @@ export default class TreeView extends Vue {
         const p1y = p1.Y();
         const p2x = p2.X();
         const p2y = p2.Y();
-        console.log("p1:", p1);
-        console.log("p2:", p2);
         if (
           !seen.has([p1x, p1y, p2x, p2y].toString()) &&
           !seen.has([p2x, p2y, p1x, p1y].toString())
@@ -76,7 +73,6 @@ export default class TreeView extends Vue {
           const length = Math.sqrt(
             Math.pow(p1x - p2x, 2) + Math.pow(p1y - p2y, 2)
           );
-          console.log("edge: (", p1x, ",", p1y, ") -> (", p2x, ",", p2y, "):", length);
           const edge = new TreeEdge(v1, v2, length);
           tree.addEdge(edge);
           seen.add([p1x, p1y, p2x, p2y].toString());

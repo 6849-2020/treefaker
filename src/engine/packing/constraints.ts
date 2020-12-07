@@ -144,7 +144,6 @@ export function toMatrix(nodes: PackingMap): matrix {
     const iKey = keys[i];
     for (let j = 0; j < n; j++) {
       const jKey = keys[j];
-      console.log("(i,j):", iKey, jKey);
       if (i !== j) {
         dists[i][j] = nodes
           .get(iKey)

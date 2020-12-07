@@ -41,6 +41,7 @@
         <tr class="threeButtons">
           <td>
             <b-button variant="primary" size="lg" v-on:click="generatePacking">
+              <b-spinner small v-show="generatingPacking"></b-spinner>
               Generate Disk Packing
             </b-button>
           </td>
@@ -68,11 +69,12 @@ import { Component, Prop, Vue } from "vue-property-decorator";
 import TreeView from './TreeView.vue';
 import CreasesView from './CreasesView.vue';
 import PackingView from './PackingView.vue';
-import { BAlert, BButton, ModalPlugin, NavbarPlugin } from 'bootstrap-vue';
+import { BAlert, BButton, BSpinner, ModalPlugin, NavbarPlugin } from 'bootstrap-vue';
 import { CreasesGraphState } from '../engine/packing';
 
 Vue.component('b-alert', BAlert)
 Vue.component('b-button', BButton);
+Vue.component('b-spinner', BSpinner);
 Vue.use(ModalPlugin);
 Vue.use(NavbarPlugin);
  
@@ -84,9 +86,14 @@ Vue.use(NavbarPlugin);
   }
 })
 export default class TreeFaker extends Vue {
-  generatePacking() {
+  generatingPacking = false;
+
+  async generatePacking() {
+    //this.generatingPacking = true;
+    //this.$forceUpdate();
     (this.$refs as any).tree.propagate();
-    (this.$refs as any).packing.pack();
+    await (this.$refs as any).packing.pack();
+    //this.generatingPacking = false;
   }
   getCreasePattern() {
     (this.$refs as any).creases.show();
