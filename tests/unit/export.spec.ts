@@ -2,7 +2,7 @@ import { expect } from "chai";
 import {
   cleanPacking,
   buildFaces,
-  generateMolecules
+  generateMolecules,
 } from "../../src/engine/creases";
 import { generateFold } from "../../src/engine/creases/export";
 import { fiveStarTree, fiveStarPacking } from "../helper";
@@ -32,8 +32,7 @@ describe("generateFold", function() {
     expect(fold.edges_vertices).to.have.lengthOf(nEdges);
     expect(fold.edges_foldAngle).to.have.lengthOf(nEdges);
     expect(fold.edges_assignment).to.have.lengthOf(nEdges);
-    expect(fold.faces_vertices).to.have.lengthOf(nFaces);
-    expect(fold.faces_edges).to.have.lengthOf(nFaces);
+    expect(fold.faces_vertices).to.have.lengthOf(nFaces - 1);
 
     // Coordinates should be well-formed.
     for (const coord of fold.vertices_coords) {
@@ -63,12 +62,6 @@ describe("generateFold", function() {
       for (const vid of face) {
         expect(vid).to.be.at.least(0);
         expect(vid).to.be.below(nNodes);
-      }
-    }
-    for (const face of fold.faces_edges) {
-      for (const eid of face) {
-        expect(eid).to.be.at.least(0);
-        expect(eid).to.be.below(nEdges);
       }
     }
 

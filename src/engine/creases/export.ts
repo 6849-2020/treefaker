@@ -32,7 +32,7 @@ export function generateFold(graph: CreasesGraph) {
 
   const vertexOrder = Array.from(graph.nodes.keys()).sort();
   const edgeOrder = Array.from(graph.edges.keys()).sort();
-  const vertexEdges: number[][] = vertexOrder.map(x => []);
+  const vertexEdges: number[][] = vertexOrder.map((x) => []);
 
   for (const vid of vertexOrder) {
     const node = graph.nodes.get(vid) as CreasesNode;
@@ -63,25 +63,26 @@ export function generateFold(graph: CreasesGraph) {
     }
   }
   for (const face of graph.faces) {
-    const nodeIds: Set<number> = new Set();
-    for (const faceNode of face.nodes) {
-      const vid = vertexOrder.indexOf(faceNode.id);
-      nodeIds.add(vid);
-    }
-    const edgeIds: Set<number> = new Set();
-    for (const faceNode of face.nodes) {
-      for (const edge of faceNode.edges) {
-        const toIdx = vertexOrder.indexOf(edge.to.id);
-        const fromIdx = vertexOrder.indexOf(edge.from.id);
-        const edgeIdParts = [edge.from.id, edge.to.id].sort();
-        const edgeId = edgeIdParts[0] + "-" + edgeIdParts[1];
-        if (nodeIds.has(toIdx) && nodeIds.has(fromIdx)) {
-          edgeIds.add(edgeOrder.indexOf(edgeId));
-        }
+    // TODO (@pjrule): the isOuterFace flag does not always
+    // seem to be reliable, so we ignore the largest face.
+    // However, we ought to fix the flag in the future.
+    const maxFaceSize = Math.max(
+      ...Array.from(graph.faces).map((f: Face) => f.nodes.length)
+    );
+    if (face.nodes.length < maxFaceSize) {
+      const nodeIds: number[] = [];
+      const reversedNodes: CreasesNode[] = Object.assign(
+        [],
+        face.nodes
+      ).reverse();
+      for (const faceNode of reversedNodes) {
+        const vid = vertexOrder.indexOf(faceNode.id);
+        nodeIds.push(vid);
       }
+      faceVertices.push(nodeIds);
+    } else {
+      console.log("skipping outer face");
     }
-    faceVertices.push(Array.from(nodeIds));
-    faceEdges.push(Array.from(edgeIds));
   }
 
   return {
@@ -94,6 +95,5 @@ export function generateFold(graph: CreasesGraph) {
     edges_foldAngle: angles,
     vertices_edges: vertexEdges,
     faces_vertices: faceVertices,
-    faces_edges: faceEdges
   };
 }

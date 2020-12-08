@@ -128,25 +128,25 @@ export default class CreasesView extends Vue {
         !this.simulator.closed
       ) {
         this.simulator.focus();
+        this.simulator.postMessage({ op: "importFold", fold: this.fold }, "*");
       } else {
         this.simulator = window.open(
           "https://origamisimulator.org/?model=treefaker"
         );
+        const fold = this.fold;
+        const simulator = this.simulator;
+        window.addEventListener("message", function(e) {
+          if (
+            simulator !== null &&
+            e.source === simulator &&
+            e.data &&
+            e.data.from === "OrigamiSimulator" &&
+            e.data.status === "ready"
+          ) {
+            simulator.postMessage({ op: "importFold", fold: fold }, "*");
+          }
+        });
       }
-      const fold = this.fold;
-      const simulator = this.simulator;
-      window.addEventListener("message", function(e) {
-        if (
-          simulator !== null &&
-          e.source === simulator &&
-          e.data &&
-          e.data.from === "OrigamiSimulator" &&
-          e.data.status === "ready"
-        ) {
-          console.log("posting...");
-          simulator.postMessage({ op: "importFold", fold: fold }, "*");
-        }
-      });
     }
   }
 }
