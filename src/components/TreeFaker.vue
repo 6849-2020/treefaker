@@ -16,7 +16,7 @@
   
   <b-modal id="aboutPopover" title="About" size="lg" ok-only>
       <p class="description">This tool was created by <a href="https://pjrule.me/" target="_blank">Parker Rule</a> and <a href="http://www.jamie.tuckerfoltz.com/" target="_blank">Jamie Tucker-Foltz</a> as a final project for <a href="https://courses.csail.mit.edu/6.849/fall20/" target="_blank">6.849: Geometric Folding Algorithms</a> (MIT), fall 2020.</p>
-      <p class="description">We are grateful for the guidance of Erik Demaine and Robert Lang.</p>
+      <p class="description">We are grateful for the guidance of Erik Demaine and Robert Lang, and we thank <a href="https://tck.mn/" target="_blank">Andy Tockman</a> for his contributions.</p>
   </b-modal>
 
   <b-modal id="controlsPopover" title="Controls" size="lg" ok-only>
@@ -26,7 +26,7 @@
           <li>Draw a tree in the left box. <strong>Ctrl + drag</strong> a vertex to add a new leaf to the tree. <strong>Shift + click</strong> on an edge to delete it. <strong>Right click</strong> on an edge to manually set its length.</li>
           <li>When you are done drawing the tree, click <strong>Generate Disk Packing</strong>.
           <li>When you are satisfied with the disk packing, click <strong>Get Crease Pattern</strong>.</li>
-          <li>To export the crease pattern, click <strong>Open in Origami Simulator</strong> or <strong>File > Export FOLD</strong>.</li>
+          <li>To export the crease pattern, click <strong>Open in Origami Simulator</strong> or <strong>File > Export FOLD</strong>. <em>(As we have not fully implemented mountain/valley assignment, rendering in Origami Simulator may fail.)</em></li>
         </ol>
       </p>
   </b-modal>
