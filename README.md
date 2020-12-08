@@ -1,35 +1,42 @@
 # TreeFaker
 
-## About
+**Authors**: Parker Rule (@pjrule), Jamie Tucker-Foltz (@jtuckerfoltz)
+**Contributors**: Andy Tockman (@tckmn)
 
-## Attributions
-
-## Project
+This 6.849 final project is a lightweight web-based implementation of Robert J. Lang's [TreeMaker](https://langorigami.com/article/treemaker/) software for origami design.
+## Running
+[A live version of this project is available on GitHub Pages.](https://6849-2020.github.io/treefaker/index.html) This project uses Node.js and Vue.js; to run locally, ensure that you have a recent version of Node.js (≥v10.16.3) and NPM (≥6.9.0) installed.
 
 ### Project setup
 ```
 yarn install
 ```
 
-#### Compiles and hot-reloads for development
+### Compiles and hot-reloads for development
 ```
 yarn serve
 ```
 
-#### Compiles and minifies for production
+### Compiles and minifies for production
 ```
 yarn build
 ```
 
-#### Run your unit tests
+### Run unit tests
 ```
 yarn test:unit
 ```
 
-#### Lints and fixes files
+### Lints and fixes files
 ```
 yarn lint
 ```
 
-#### Customize configuration
+### Customize configuration
 See [Configuration Reference](https://cli.vuejs.org/config/).
+
+## Attributions
+We stand on the shoulders of giants. Particularly:
+* Some parts of the disk packing and universal molecule modules are based heavily on Lang's TreeMaker 5 implementation. Citations are included within individual files.
+* We use some CSS styles from [Origami Simulator](https://origamisimulator.org/).
+* We use a GitHub deploy script [from Roland Doda](https://dev.to/rolanddoda/deploy-to-github-pages-like-a-pro-with-github-actions-4hdg).
