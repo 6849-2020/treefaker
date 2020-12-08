@@ -2,7 +2,13 @@
 /**
  * Helper functions for exporting a crease pattern to the FOLD format.
  */
-import { CreasesGraph, CreasesNode, Crease, MVAssignment } from "../packing";
+import {
+  CreasesGraph,
+  CreasesNode,
+  Crease,
+  MVAssignment,
+  Face,
+} from "../packing";
 
 function edgeAssignmentShort(mv: MVAssignment): string {
   switch (mv) {
@@ -80,8 +86,6 @@ export function generateFold(graph: CreasesGraph) {
         nodeIds.push(vid);
       }
       faceVertices.push(nodeIds);
-    } else {
-      console.log("skipping outer face");
     }
   }
 
