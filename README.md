@@ -1,6 +1,7 @@
 # TreeFaker
 
 **Authors**: Parker Rule (@pjrule), Jamie Tucker-Foltz (@jtuckerfoltz)
+
 **Contributors**: Andy Tockman (@tckmn)
 
 This 6.849 final project is a lightweight web-based implementation of Robert J. Lang's [TreeMaker](https://langorigami.com/article/treemaker/) software for origami design.

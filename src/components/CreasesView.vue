@@ -122,6 +122,7 @@ export default class CreasesView extends Vue {
 
   origamiSimulator() {
     if (this.fold !== undefined) {
+      // POSTing to Origami Simulator: see @edemaine's Maze Font tool, etc.
       if (
         this.simulator !== null &&
         this.simulator !== undefined &&
