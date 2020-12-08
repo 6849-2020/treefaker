@@ -4,7 +4,7 @@
 
 <script lang="ts">
 import { Component, Prop, Vue } from "vue-property-decorator";
-import { JSXGraph, Board, COORDS_BY_USER } from "jsxgraph";
+import { JSXGraph, Board, Coords, COORDS_BY_USER, COORDS_BY_SCREEN, getPosition } from "jsxgraph";
 import { TreeGraph, TreeNode, TreeEdge } from "../engine/packing";
 
 @Component
@@ -14,17 +14,42 @@ export default class TreeView extends Vue {
   nextPointId: number; // The least positive integer not in pointIdsInUse.
   treePoints: Map<any, any>; // Map from all points to set of incident lines.
   edgeLengthLabelOf: Map<any, any>; // Map from each line to its edge length label.
+  adjustVerts: any;
+  adjustPt: any;
+  adjustAngle: any;
   treeBoard: Board | null;
+  undoPoints: Array<TreeGraph>;
+  currentUndoPoint: number;
 
   constructor() {
     super();
+
+    // ugh, apparently i need to copy/paste this because typescript isn't smart enough to realize resetState() assigns to these -alt
+    this.readyToCreateNewPoint = true;
+    this.pointIdsInUse = new Set();
+    this.nextPointId = 1;
+    this.edgeLengthLabelOf = new Map();
+    this.treePoints = new Map();
+    this.edgeLengthLabelOf = new Map();
+    this.adjustVerts = undefined;
+    this.adjustPt = undefined;
+    this.adjustAngle = undefined;
+
+    this.treeBoard = null;
+    this.undoPoints = [];
+    this.currentUndoPoint = 0;
+  }
+
+  resetState() {
     this.readyToCreateNewPoint = true; // Lock to make sure we don't try to create several new points in one ctrl press.
     this.pointIdsInUse = new Set();
     this.nextPointId = 1;
     this.edgeLengthLabelOf = new Map();
     this.treePoints = new Map();
     this.edgeLengthLabelOf = new Map();
-    this.treeBoard = null;
+    this.adjustVerts = undefined;
+    this.adjustPt = undefined;
+    this.adjustAngle = undefined;
   }
 
   mounted() {
@@ -38,10 +63,33 @@ export default class TreeView extends Vue {
     this.treePoints.set(initialPoint1, new Set());
     this.treePoints.set(initialPoint2, new Set());
     this.createLine(initialPoint1, initialPoint2);
+
+    // undo/redo
+    this.setUndoPoint(true);
+    window.addEventListener('keydown', e => {
+      if (e.ctrlKey && e.key === 'y' && this.currentUndoPoint < this.undoPoints.length - 1) {
+        this.deserialize(this.undoPoints[++this.currentUndoPoint]);
+      } else if (e.ctrlKey && e.key === 'z' && this.currentUndoPoint > 0) {
+        this.deserialize(this.undoPoints[--this.currentUndoPoint]);
+      }
+    });
+
+    // adjust
+    this.treeBoard.on('move', e => {
+      if (!this.adjustVerts) return;
+      const [cx, cy] = this.toCoords(e),
+            newAngle = Math.atan2(cy - this.adjustPt[1], cx - this.adjustPt[0]),
+            s = Math.sin(newAngle - this.adjustAngle), c = Math.cos(newAngle - this.adjustAngle);
+      for (const pt of this.adjustVerts) {
+        pt.v.moveTo([
+          c*(pt.orig[0] - this.adjustPt[0]) - s*(pt.orig[1] - this.adjustPt[1]) + this.adjustPt[0] + pt.offset[0],
+          s*(pt.orig[0] - this.adjustPt[0]) + c*(pt.orig[1] - this.adjustPt[1]) + this.adjustPt[1] + pt.offset[1]
+        ]);
+      }
+    });
   }
 
-  propagate() {
-    /* Update the global state with a `TreeGraph` representation. */
+  serialize(): TreeGraph {
     const tree = new TreeGraph();
     const newPoints = new Map();
 
@@ -81,8 +129,47 @@ export default class TreeView extends Vue {
       }
     });
 
-    // Save the new tree to global state.
-    this.$store.commit("updateTreeGraph", tree);
+    return tree;
+  }
+
+  deserialize(tree: TreeGraph) {
+    this.treeBoard.suspendUpdate();
+
+    this.treeBoard.removeObject(Array.from(this.treeBoard.objectsList));
+    this.resetState();
+
+    const nodeToPoint = new Map();
+
+    tree.nodes.forEach(node => {
+      const point = this.createPoint(node.x, node.y, parseInt(node.id));
+      this.treePoints.set(point, new Set());
+      nodeToPoint.set(node.id, point);
+    });
+    this.resetNextPointId();
+
+    tree.edges.forEach(edge => {
+      this.createLine(nodeToPoint.get(edge.to.id), nodeToPoint.get(edge.from.id));
+    });
+
+    this.treeBoard.unsuspendUpdate();
+  }
+
+  setUndoPoint(first?: boolean) {
+    const tree: TreeGraph = this.serialize();
+    if (first) {
+      this.undoPoints = [tree];
+    } else {
+      if (this.currentUndoPoint != this.undoPoints.length - 1) {
+        this.undoPoints = this.undoPoints.slice(0, this.currentUndoPoint + 1);
+      }
+      this.undoPoints.push(tree);
+      ++this.currentUndoPoint;
+    }
+  }
+
+  propagate() {
+    /* Update the global state with a `TreeGraph` representation. */
+    this.$store.commit("updateTreeGraph", this.undoPoints[this.currentUndoPoint]);
   }
 
   findSubtree(
@@ -133,6 +220,7 @@ export default class TreeView extends Vue {
       for (const point of smallerSubtree) {
         point.setPosition(COORDS_BY_USER, [point.X() + dx, point.Y() + dy]);
       }
+      this.setUndoPoint();
     }
   }
 
@@ -179,10 +267,8 @@ export default class TreeView extends Vue {
       this.treeBoard.removeObject(point);
       this.treePoints.delete(point);
     }
-    this.nextPointId = 1;
-    while (this.pointIdsInUse.has(this.nextPointId)) {
-      this.nextPointId++;
-    }
+    this.resetNextPointId();
+    this.setUndoPoint();
   }
 
   // Creates a line between point1 and point2.
@@ -204,67 +290,98 @@ export default class TreeView extends Vue {
     this.treePoints.get(point1).add(newLine);
     this.treePoints.get(point2).add(newLine);
     this.edgeLengthLabelOf.set(newLine, newLineEdgeLengthLabel);
-    newLine.on(
-      "up",
-      function(this: TreeView, e) {
-        if (e.shiftKey) this.deleteSubtree(point1, point2);
-      }.bind(this)
-    );
-    newLine.on(
-      "down",
-      function(this: TreeView, e) {
-        if (e.which === 3) this.changeEdgeLength(point1, point2);
-      }.bind(this)
-    );
+
+    newLine.on("up", function(this: TreeView, e) {
+      if (this.adjustVerts) {
+        this.adjustVerts = undefined;
+        this.adjustPt = undefined;
+        this.adjustAngle = undefined;
+        this.setUndoPoint();
+      }
+      else if (e.shiftKey) this.deleteSubtree(point1, point2);
+    }.bind(this));
+
+    newLine.on("down", function(this: TreeView, e) {
+      if (e.which === 3) this.changeEdgeLength(point1, point2);
+      if (e.altKey) {
+        const [cx, cy] = this.toCoords(e),
+              distsq1 = Math.pow(point1.X() - cx, 2) + Math.pow(point1.Y() - cy, 2),
+              distsq2 = Math.pow(point2.X() - cx, 2) + Math.pow(point2.Y() - cy, 2),
+              centerPoint = distsq1 < distsq2 ? point2 : point1,
+              otherPoint = distsq1 < distsq2 ? point1 : point2,
+              [verts, _] = this.findSubtree([], new Set(), centerPoint, otherPoint);
+        this.adjustVerts = verts.map(v => ({
+          orig: e.ctrlKey ? [otherPoint.X(), otherPoint.Y()] : [v.X(), v.Y()],
+          offset: e.ctrlKey ? [v.X() - otherPoint.X(), v.Y() - otherPoint.Y()] : [0, 0],
+          v: v
+        }));
+        this.adjustPt = [centerPoint.X(), centerPoint.Y()];
+        this.adjustAngle = Math.atan2(cy - centerPoint.Y(), cx - centerPoint.X());
+      }
+    }.bind(this));
+
     return newLine;
   }
 
   // Creates a point at the given user coordinates.
-  createPoint(x: any, y: any): any {
+  createPoint(x: any, y: any, forceName?: number): any {
+    const name = forceName || this.nextPointId;
     const point = this.treeBoard.create("point", [x, y], {
-      name: this.nextPointId
+      name: name
     });
-    point.on(
-      "up",
-      function(this: TreeView, e: any) {
-        this.readyToCreateNewPoint = true;
-      }.bind(this)
-    );
-    point.on(
-      "down",
-      function(this: TreeView, e: any) {
-        if (e.ctrlKey && this.readyToCreateNewPoint) {
-          this.readyToCreateNewPoint = false;
-          const newPoint = this.createPoint(point.X(), point.Y());
-          this.treePoints.set(newPoint, new Set());
+    point.on("up", function(this: TreeView, e: any) {
+      if (this.readyToCreateNewPoint) this.setUndoPoint();
+      this.readyToCreateNewPoint = true;
+    }.bind(this));
+    point.on("down", function(this: TreeView, e: any) {
+      if (e.ctrlKey && this.readyToCreateNewPoint) {
+        this.readyToCreateNewPoint = false;
+        const newPoint = this.createPoint(point.X(), point.Y());
+        this.treePoints.set(newPoint, new Set());
 
-          // Redraw lines to new point.
-          const incidentLines: Set<any> = new Set(this.treePoints.get(point));
-          for (const incidentLine of incidentLines) {
-            let otherPoint = null;
-            if (incidentLine.point1 === point) {
-              otherPoint = incidentLine.point2;
-            } else if (incidentLine.point2 === point) {
-              otherPoint = incidentLine.point1;
-            } else {
-              console.log("Error: Line in treePoints not incident.");
-              console.log(point.name);
-              console.log(incidentLine.point1.name);
-              console.log(incidentLine.point2.name);
-            }
-            this.deleteLine(incidentLine);
-            this.createLine(otherPoint, point); // TODO If it stops switching the element being dragged, change point to newPoint and take out the break.
-            break;
+        // Redraw lines to new point.
+        const incidentLines : Set<any> = new Set(this.treePoints.get(point));
+        for (const incidentLine of incidentLines) {
+          let otherPoint = null;
+          if (incidentLine.point1 === point) {
+            otherPoint = incidentLine.point2;
+          } else if (incidentLine.point2 === point) {
+            otherPoint = incidentLine.point1;
+          } else {
+            console.log("Error: Line in treePoints not incident.");
+            console.log(point.name);
+            console.log(incidentLine.point1.name);
+            console.log(incidentLine.point2.name);
           }
-          this.createLine(point, newPoint);
+          this.deleteLine(incidentLine);
+          this.createLine(otherPoint, point); // TODO If it stops switching the element being dragged, change point to newPoint and take out the break.
+          break;
         }
-      }.bind(this)
-    );
-    this.pointIdsInUse.add(this.nextPointId);
+        this.createLine(point, newPoint);
+      }
+    }.bind(this));
+    this.pointIdsInUse.add(name);
+    if (!forceName) {
+      while (this.pointIdsInUse.has(this.nextPointId)) {
+        this.nextPointId++;
+      }
+    }
+    return point;
+  }
+
+  resetNextPointId() {
+    this.nextPointId = 1;
     while (this.pointIdsInUse.has(this.nextPointId)) {
       this.nextPointId++;
     }
-    return point;
+  }
+
+  // TODO doesn't handle multitouch properly, see https://jsxgraph.uni-bayreuth.de/wiki/index.php/Browser_event_and_coordinates -alt
+  toCoords(e): any[] {
+    const p1 = this.treeBoard.getCoordsTopLeftCorner(e, 0),
+          p2 = getPosition(e),
+          coords = new Coords(COORDS_BY_SCREEN, [p2[0] - p1[0], p2[1] - p1[1]], this.treeBoard);
+    return [coords.usrCoords[1], coords.usrCoords[2]];
   }
 }
 </script>
