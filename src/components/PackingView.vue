@@ -68,17 +68,19 @@ export default class PackingView extends Vue {
     }
 
     const leafDistances = new Map();
-    distances.forEach(function(dists: Map<string, Map<string, Map<string, number>>>, key: string) {
+    distances.forEach(function(
+      dists: Map<string, Map<string, Map<string, number>>>,
+      key: string
+    ) {
       if (leaves.has(key)) {
         leafDistances.set(key, dists);
       }
     });
-    
 
     const distanceMatrix = toMatrix(leafDistances);
     const constraints = {
       constraints: genConstraints(distanceMatrix),
-      grad: genGradConstraints(distanceMatrix),
+      grad: genGradConstraints(distanceMatrix)
     };
 
     // Generate an initial solution from the user's placement of the nodes.
@@ -86,7 +88,7 @@ export default class PackingView extends Vue {
     const initSol = zeros([2 * n + 1]);
     const vKeys = Array.from(leafDistances.keys()).sort();
     const nodes = (this.$store.state as any).treeGraph.nodes;
-    vKeys.forEach(function (key, idx) {
+    vKeys.forEach(function(key, idx) {
       initSol[idx] = nodes.get(key).x;
       initSol[idx + n] = nodes.get(key).y;
     });
@@ -102,7 +104,7 @@ export default class PackingView extends Vue {
         );
         const perturbedConstraints = {
           constraints: genConstraints(perturbedDists),
-          grad: genGradConstraints(perturbedDists),
+          grad: genGradConstraints(perturbedDists)
         };
         const perturbedInitSol = add(
           initSol,
@@ -144,7 +146,8 @@ export default class PackingView extends Vue {
 
       // Display the packing.
       // TODO (@pjrule): would it be more efficient to reuse the old board?
-      const creasesGraph = (this.$store.state as any).creasesGraph as CreasesGraph;
+      const creasesGraph = (this.$store.state as any)
+        .creasesGraph as CreasesGraph;
       const packingBoard = JSXGraph.initBoard("packingViewBox", {
         boundingbox: [-0.1, 1.1, 1.1, -0.1],
         showCopyright: false,

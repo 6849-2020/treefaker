@@ -22,7 +22,7 @@ import {
   index,
   subset,
   range,
-  flatten,
+  flatten
 } from "mathjs";
 import { Constraint, ConstraintSet } from "./constraints";
 
@@ -236,7 +236,7 @@ function lineSearch(
       return {
         X: XNew,
         f: fNew,
-        grad: gradAugLag(XNew, constraints, mult, weight),
+        grad: gradAugLag(XNew, constraints, mult, weight)
       };
     } else {
       // The hard part: do a backtracking step.
@@ -274,7 +274,7 @@ function lineSearch(
   return {
     X: lastX,
     f: lastF,
-    grad: gradAugLag(lastX, constraints, mult, weight),
+    grad: gradAugLag(lastX, constraints, mult, weight)
   };
 }
 
@@ -373,7 +373,7 @@ export function solve(
   let lastStep = {
     X: X,
     f: augLag(X, constraints, mult, weight),
-    grad: gradAugLag(X, constraints, mult, weight),
+    grad: gradAugLag(X, constraints, mult, weight)
   };
   let bestObjVal: number | undefined = 0;
   let bestSol: matrix | undefined = undefined;

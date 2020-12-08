@@ -1,7 +1,7 @@
 import { matrix, math } from "mathjs";
 
 const TOLERANCE = 0.000001;
-const UPDATE_TOLERANCE = TOLERANCE*5;
+const UPDATE_TOLERANCE = TOLERANCE * 5;
 const BINARY_SEARCH_TOLERANCE = TOLERANCE / 4;
 const IS_RIGHT_TURN_CUTOFF_1 = -Math.PI - TOLERANCE;
 const IS_RIGHT_TURN_CUTOFF_2 = Math.PI - TOLERANCE;
@@ -9,9 +9,6 @@ const IS_RIGHT_TURN_CUTOFF_3 = -2 * Math.PI + TOLERANCE;
 const IS_RIGHT_TURN_CUTOFF_4 = 2 * Math.PI - TOLERANCE;
 
 function getIdString(id1: string, id2: string) {
-  //console.log("---------");
-  //console.log(id1);
-  //console.log(id2);
   if (id1 > id2) {
     return id2 + "-" + id1;
   } else {
@@ -141,7 +138,7 @@ enum CreaseType {
   Hinge,
   Pseudohinge,
   ActiveHull,
-  InactiveHull,
+  InactiveHull
 }
 
 enum MVAssignment {
@@ -149,7 +146,7 @@ enum MVAssignment {
   Valley,
   Tristate,
   Unknown,
-  Boundary,
+  Boundary
 }
 
 class Crease extends Edge {
@@ -158,6 +155,7 @@ class Crease extends Edge {
   creaseType: CreaseType;
   assignment: MVAssignment;
 
+  // Mapping from crease type to mountain/valley assignment.
   updateCreaseType(creaseType: CreaseType) {
     this.creaseType = creaseType;
     if (
@@ -165,12 +163,12 @@ class Crease extends Edge {
       creaseType == CreaseType.InactiveHull
     ) {
       this.assignment = MVAssignment.Boundary;
-    } else if (creaseType == CreaseType.Gusset
-          || creaseType == CreaseType.Pseudohinge) {
-      this.assignment = MVAssignment.Valley;
     } else if (
-      creaseType == CreaseType.Ridge 
+      creaseType == CreaseType.Gusset ||
+      creaseType == CreaseType.Pseudohinge
     ) {
+      this.assignment = MVAssignment.Valley;
+    } else if (creaseType == CreaseType.Ridge) {
       this.assignment = MVAssignment.Mountain;
     } else if (creaseType == CreaseType.Hinge) {
       this.assignment = MVAssignment.Tristate;
@@ -184,7 +182,7 @@ class Crease extends Edge {
     this.leftFace = null;
     this.rightFace = null;
 
-    // TODO(Parker) These two lines are only necessary because TypeScript is being stupid. Can you fix?
+    // TODO These two lines are only necessary because TypeScript is being stupid.
     this.creaseType = CreaseType.Axial;
     this.assignment = MVAssignment.Unknown;
 
@@ -209,6 +207,7 @@ class Graph<N extends Node, E extends Edge> {
     }
   }
 
+  // Inserts edge at correct position within rotation system.
   addEdge(e: E) {
     if (!this.nodes.has(e.from.id)) {
       throw new Error(`Cannot add an edge from nonexistent node ${e.from.id}.`);
@@ -261,9 +260,9 @@ class Graph<N extends Node, E extends Edge> {
     this.edges.set(e.idString(), e);
   }
 
+  // Returns the edge between v1 and v2, or undefined if there is no such edge.
   getEdge(v1: N, v2: N) {
     const idString = getIdString(v1.id, v2.id);
-    //console.log(`From getEdge: idString = ${idString}`);
     return this.edges.get(idString);
   }
 
@@ -291,8 +290,6 @@ class Graph<N extends Node, E extends Edge> {
 }
 
 class TreeGraph extends Graph<TreeNode, TreeEdge> {
-  //shortestPath(from: TreeNode, to: TreeNode) {}
-
   // Returns d such that, for all leaf nodes a and b, d.get(a).get(b).get(c) is the tree distance from a to c on the path to b.
   getDistances(): Map<string, Map<string, Map<string, number>>> {
     const d = new Map();
@@ -311,6 +308,7 @@ class TreeGraph extends Graph<TreeNode, TreeEdge> {
     return d;
   }
 
+  // Helper function for getDistances.
   getDistancesRecursive(
     distancesTo: Map<string, Map<string, number>>,
     distanceSoFar: number,
@@ -339,12 +337,13 @@ class TreeGraph extends Graph<TreeNode, TreeEdge> {
   }
 }
 
+// The creases graph is modified in-place by several functions; these states are used to enforce that you don't try to make these calls in the wrong order.
 enum CreasesGraphState {
   NewlyCreated,
   Clean,
   PreUMA,
   PostUMA,
-  FullyAssigned,
+  FullyAssigned
 }
 
 class CreasesGraph extends Graph<CreasesNode, Crease> {
@@ -367,13 +366,13 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
     }
   }
 
+  // For constructing new nodes that were not in the original packing.
   nextInternalId() {
     return "i" + (this.nextInternalNodeIndex++).toString();
   }
 
+  // Splits a crease into two pieces, returning the node inserted in the middle. Does not check that x and y are actually coordinates of a point in the middle of the crease e.
   subdivideCrease(e: Crease, x: number, y: number) {
-    //console.log(`Subdividing crease at (${x}, ${y}).`);
-    //console.log(e);
     if (this.state != CreasesGraphState.PreUMA) {
       throw new Error(`Do not call subdivideCrease from state ${this.state}.`);
     }
@@ -402,16 +401,17 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
       leftFace.nodes.splice(indexOfToNodeInLeftFace, 0, newNode);
       rightFace.nodes.splice(indexOfFromNodeInRightFace, 0, newNode);
     }
-    //console.log(newNode.edges);
     if (this.getEdge(newNode, fromNode) == undefined) {
       console.log(this.edges);
-      throw new Error("Problem subdividing crease - cannot find one of the new edges.");
+      throw new Error(
+        "Problem subdividing crease - cannot find one of the new edges."
+      );
     }
     return newNode;
   }
 
+  // Removes nodes that were created as part of the UMA insetting process, but are unnecessary for the final crease pattern since they have degree 2.
   suppressNodeIfRedundant(v2: CreasesNode, newCreases: Set<Crease>) {
-    //if (v2.id == "i11") console.log(v2.edges);
     if (this.state != CreasesGraphState.PreUMA) {
       throw new Error(
         `Do not call suppressRidgeNodeIfRedundant from state ${this.state}.`
@@ -450,6 +450,7 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
     return false;
   }
 
+  // Constructs a new face to the left of a crease by traversing the rotation system.
   fillInFaceToTheLeft(vStart: CreasesNode, eStart: Crease) {
     const face = new Face();
     this.faces.add(face);
@@ -468,7 +469,9 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
             face.inactiveHullEdge = e;
           } else {
             throw new Error(
-              `Face ${face.nodes.map(n => n.id)} has at least two inactive hull edges: ${face.inactiveHullEdge.idString()} and ${e.idString()}.`
+              `Face ${face.nodes.map(
+                n => n.id
+              )} has at least two inactive hull edges: ${face.inactiveHullEdge.idString()} and ${e.idString()}.`
             );
           }
         }
@@ -484,6 +487,7 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
     );
   }
 
+  // Makes new faces to either side of every crease in newCreases, as long as the faces to the left and right of each crease are unset or equal to the old face being subdivided.
   subdivideFace(face: Face, newCreases: Set<Crease>) {
     const newFaces: Array<Face> = [];
     for (const e of newCreases) {
@@ -522,5 +526,5 @@ export {
   Graph,
   TreeGraph,
   CreasesGraphState,
-  CreasesGraph,
+  CreasesGraph
 };

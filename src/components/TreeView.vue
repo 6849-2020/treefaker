@@ -32,7 +32,7 @@ export default class TreeView extends Vue {
       boundingbox: [0, 10, 10, 0],
       showCopyright: false
     });
-    
+
     const initialPoint1 = this.createPoint(5, 4);
     const initialPoint2 = this.createPoint(5, 6);
     this.treePoints.set(initialPoint1, new Set());
@@ -204,12 +204,18 @@ export default class TreeView extends Vue {
     this.treePoints.get(point1).add(newLine);
     this.treePoints.get(point2).add(newLine);
     this.edgeLengthLabelOf.set(newLine, newLineEdgeLengthLabel);
-    newLine.on("up", function(this: TreeView, e) {
-      if (e.shiftKey) this.deleteSubtree(point1, point2);
-    }.bind(this));
-    newLine.on("down", function(this: TreeView, e) {
-      if (e.which === 3) this.changeEdgeLength(point1, point2);
-    }.bind(this));
+    newLine.on(
+      "up",
+      function(this: TreeView, e) {
+        if (e.shiftKey) this.deleteSubtree(point1, point2);
+      }.bind(this)
+    );
+    newLine.on(
+      "down",
+      function(this: TreeView, e) {
+        if (e.which === 3) this.changeEdgeLength(point1, point2);
+      }.bind(this)
+    );
     return newLine;
   }
 
@@ -218,36 +224,42 @@ export default class TreeView extends Vue {
     const point = this.treeBoard.create("point", [x, y], {
       name: this.nextPointId
     });
-    point.on("up", function(this: TreeView, e: any) {
-      this.readyToCreateNewPoint = true;
-    }.bind(this));
-    point.on("down", function(this: TreeView, e: any) {
-      if (e.ctrlKey && this.readyToCreateNewPoint) {
-        this.readyToCreateNewPoint = false;
-        const newPoint = this.createPoint(point.X(), point.Y());
-        this.treePoints.set(newPoint, new Set());
+    point.on(
+      "up",
+      function(this: TreeView, e: any) {
+        this.readyToCreateNewPoint = true;
+      }.bind(this)
+    );
+    point.on(
+      "down",
+      function(this: TreeView, e: any) {
+        if (e.ctrlKey && this.readyToCreateNewPoint) {
+          this.readyToCreateNewPoint = false;
+          const newPoint = this.createPoint(point.X(), point.Y());
+          this.treePoints.set(newPoint, new Set());
 
-        // Redraw lines to new point.
-        const incidentLines : Set<any> = new Set(this.treePoints.get(point));
-        for (const incidentLine of incidentLines) {
-          let otherPoint = null;
-          if (incidentLine.point1 === point) {
-            otherPoint = incidentLine.point2;
-          } else if (incidentLine.point2 === point) {
-            otherPoint = incidentLine.point1;
-          } else {
-            console.log("Error: Line in treePoints not incident.");
-            console.log(point.name);
-            console.log(incidentLine.point1.name);
-            console.log(incidentLine.point2.name);
+          // Redraw lines to new point.
+          const incidentLines: Set<any> = new Set(this.treePoints.get(point));
+          for (const incidentLine of incidentLines) {
+            let otherPoint = null;
+            if (incidentLine.point1 === point) {
+              otherPoint = incidentLine.point2;
+            } else if (incidentLine.point2 === point) {
+              otherPoint = incidentLine.point1;
+            } else {
+              console.log("Error: Line in treePoints not incident.");
+              console.log(point.name);
+              console.log(incidentLine.point1.name);
+              console.log(incidentLine.point2.name);
+            }
+            this.deleteLine(incidentLine);
+            this.createLine(otherPoint, point); // TODO If it stops switching the element being dragged, change point to newPoint and take out the break.
+            break;
           }
-          this.deleteLine(incidentLine);
-          this.createLine(otherPoint, point); // TODO If it stops switching the element being dragged, change point to newPoint and take out the break.
-          break;
+          this.createLine(point, newPoint);
         }
-        this.createLine(point, newPoint);
-      }
-    }.bind(this));
+      }.bind(this)
+    );
     this.pointIdsInUse.add(this.nextPointId);
     while (this.pointIdsInUse.has(this.nextPointId)) {
       this.nextPointId++;
