@@ -22,7 +22,7 @@ import {
   index,
   subset,
   range,
-  flatten
+  flatten,
 } from "mathjs";
 import { Constraint, ConstraintSet } from "./constraints";
 
@@ -236,7 +236,7 @@ function lineSearch(
       return {
         X: XNew,
         f: fNew,
-        grad: gradAugLag(XNew, constraints, mult, weight)
+        grad: gradAugLag(XNew, constraints, mult, weight),
       };
     } else {
       // The hard part: do a backtracking step.
@@ -274,7 +274,7 @@ function lineSearch(
   return {
     X: lastX,
     f: lastF,
-    grad: gradAugLag(lastX, constraints, mult, weight)
+    grad: gradAugLag(lastX, constraints, mult, weight),
   };
 }
 
@@ -339,6 +339,13 @@ function minimizeAugLag(
     const sumXi = Math.pow(norm(searchDirection), 2);
 
     // Update the inverse Hessian.
+    /*
+    console.log("fac:", fac);
+    console.log("fae:", fae);
+    console.log("sumDg:", sumDg);
+    console.log("sumXi:", sumXi);
+    */
+
     if (fac > Math.sqrt(EPS * sumDg * sumXi)) {
       const facInv = 1.0 / fac;
       const fad = 1.0 / fae;
@@ -354,7 +361,10 @@ function minimizeAugLag(
         multiply(fad, outer(hdg, hdg))
       );
       hessInv = add(hessInv, hessInvDelta);
+      //console.log("\tinverse Hessian delta:", hessInvDelta);
     }
+    //console.log("\tinverse Hessian:", hessInv);
+    //console.log("\tgradient:", nextStep.grad);
     searchDirection = multiply(hessInv, multiply(-1, nextStep.grad));
     lastStep = nextStep;
   }
@@ -373,7 +383,7 @@ export function solve(
   let lastStep = {
     X: X,
     f: augLag(X, constraints, mult, weight),
-    grad: gradAugLag(X, constraints, mult, weight)
+    grad: gradAugLag(X, constraints, mult, weight),
   };
   let bestObjVal: number | undefined = 0;
   let bestSol: matrix | undefined = undefined;

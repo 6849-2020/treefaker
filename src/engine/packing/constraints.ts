@@ -5,11 +5,12 @@
  * augmented Lagrangian + line search solver.
  */
 import { matrix, zeros, size } from "mathjs";
+import { TreeGraph } from ".";
 
-export type PackingMap = Map<string, Map<string, Map<string, number>>>;
-export type Constraint = (X: matrix) => number;
-export type GradConstraint = (X: matrix) => matrix;
-export type ConstraintSet = {
+type PackingMap = Map<string, Map<string, Map<string, number>>>;
+type Constraint = (X: matrix) => number;
+type GradConstraint = (X: matrix) => matrix;
+type ConstraintSet = {
   constraints: Constraint[];
   grad: GradConstraint[];
 };
@@ -89,7 +90,7 @@ function gradOverlapConstraint(
   };
 }
 
-export function genConstraints(dists: matrix): Constraint[] {
+function genConstraints(dists: matrix): Constraint[] {
   const n = size(dists)[0];
   const lbConstraints = Array(2 * n)
     .fill(null)
@@ -108,11 +109,11 @@ export function genConstraints(dists: matrix): Constraint[] {
     ubConstraint(2 * n, MAX_SCALE),
     ...lbConstraints,
     ...ubConstraints,
-    ...overlapConstraints
+    ...overlapConstraints,
   ];
 }
 
-export function genGradConstraints(dists: matrix): GradConstraint[] {
+function genGradConstraints(dists: matrix): GradConstraint[] {
   const n = size(dists)[0];
   const gradLbConstraints = Array(2 * n)
     .fill(null)
@@ -131,11 +132,11 @@ export function genGradConstraints(dists: matrix): GradConstraint[] {
     gradUbConstraint(2 * n, MAX_SCALE, 2 * n + 1),
     ...gradLbConstraints,
     ...gradUbConstraints,
-    ...gradOverlapConstraints
+    ...gradOverlapConstraints,
   ];
 }
 
-export function toMatrix(nodes: PackingMap): matrix {
+function toMatrix(nodes: PackingMap): matrix {
   const keys = Array.from(nodes.keys()).sort();
   const n = keys.length;
   const dists = zeros([n, n]);
@@ -154,3 +155,39 @@ export function toMatrix(nodes: PackingMap): matrix {
   }
   return dists;
 }
+
+function filterLeaves(tree: TreeGraph): PackingMap {
+  const leaves = new Set();
+  const leafLengths = new Map();
+  tree.nodes.forEach(function(node, key: string) {
+    if (node.edges.length === 1) {
+      leaves.add(key);
+      leafLengths.set(key, node.edges[0].length);
+    }
+  });
+  const distances = tree.getDistances();
+  const leafDistances = new Map();
+  distances.forEach((dists: any, key: string) => {
+    if (leaves.has(key)) {
+      leafDistances.set(key, dists);
+    }
+  });
+  return leafDistances;
+}
+
+export {
+  PackingMap,
+  Constraint,
+  GradConstraint,
+  ConstraintSet,
+  lbConstraint,
+  ubConstraint,
+  overlapConstraint,
+  gradLbConstraint,
+  gradUbConstraint,
+  gradOverlapConstraint,
+  genConstraints,
+  genGradConstraints,
+  toMatrix,
+  filterLeaves,
+};

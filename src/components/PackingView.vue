@@ -7,11 +7,12 @@ import Vuex from "vuex";
 import { Component, Prop, Vue } from "vue-property-decorator";
 import { JSXGraph, Board } from "jsxgraph";
 import { zeros, size, random, add, multiply, matrix } from "mathjs";
-import { Packing, PackingNode, CreasesGraph } from "../engine/packing";
+import { Packing, PackingNode, TreeGraph, TreeNode, CreasesGraph } from "../engine/packing";
 import {
   genConstraints,
   genGradConstraints,
-  toMatrix
+  toMatrix,
+  filterLeaves
 } from "../engine/packing/constraints";
 import { solve } from "../engine/packing/alm";
 import { cleanPacking } from "../engine/creases";
@@ -47,41 +48,22 @@ export default class PackingView extends Vue {
     const PERTURB_EPS = 1e-3;
 
     // Construct the optimization problem.
-    const leaves = new Set();
+    const treeGraph = (this.$store.state as any).treeGraph as TreeGraph;
     const leafLengths = new Map();
-    (this.$store.state as any).treeGraph.nodes.forEach(function(
-      node,
-      key: string
-    ) {
+    treeGraph.nodes.forEach((node: TreeNode, key: string) => {
       if (node.edges.length === 1) {
-        leaves.add(key);
         leafLengths.set(key, node.edges[0].length);
       }
     });
-    const distances = (this.$store.state as any).treeGraph.getDistances();
-    if (leaves.size === distances.size) {
+    const leafDistances = filterLeaves(treeGraph);
+    if (leafDistances.size === treeGraph.nodes.size) {
       this.$store.commit(
         "updateGlobalError",
         "Add at least one non-leaf vertex to the tree."
       );
       return;
     }
-
-    const leafDistances = new Map();
-    distances.forEach(function(
-      dists: Map<string, Map<string, Map<string, number>>>,
-      key: string
-    ) {
-      if (leaves.has(key)) {
-        leafDistances.set(key, dists);
-      }
-    });
-
     const distanceMatrix = toMatrix(leafDistances);
-    const constraints = {
-      constraints: genConstraints(distanceMatrix),
-      grad: genGradConstraints(distanceMatrix)
-    };
 
     // Generate an initial solution from the user's placement of the nodes.
     const n = size(distanceMatrix)[0];
