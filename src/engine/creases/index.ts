@@ -35,13 +35,16 @@ function activeDistance(
   v1: CreasesNode,
   v2: CreasesNode,
   scaleFactor: number,
-  d: Map<string, Map<string, Map<string, number>>>,
+  d: Map<string, Map<string, Array<[string, number]>>>,
   leafExtensions: Map<CreasesNode, number>
 ) {
-  const distanceAlongPath = ((d.get(v1.id) as Map<
+  const distancesAlongPath = (d.get(v1.id) as Map<
     string,
-    Map<string, number>
-  >).get(v2.id) as Map<string, number>).get(v2.id) as number;
+    Array<[string, number]>
+  >).get(v2.id) as Array<[string, number]>;
+  const distanceAlongPath = distancesAlongPath[
+    distancesAlongPath.length - 1
+  ][1] as number;
   return (
     scaleFactor *
     (distanceAlongPath +
@@ -55,7 +58,7 @@ function isActive(
   v1: CreasesNode,
   v2: CreasesNode,
   scaleFactor: number,
-  d: Map<string, Map<string, Map<string, number>>>,
+  d: Map<string, Map<string, Array<[string, number]>>>,
   leafExtensions: Map<CreasesNode, number>,
   tolerance: number
 ) {
@@ -148,7 +151,7 @@ export function getIndexOfConvexGap(v: Node) {
 // Makes leafs longer so that all active polygons are convex.
 export function cleanPacking(
   p: Packing,
-  d: Map<string, Map<string, Map<string, number>>>
+  d: Map<string, Map<string, Array<[string, number]>>>
 ): CreasesGraph {
   if (p.nodes.size < 2) {
     throw new Error("Must have at least two nodes in packing.");
@@ -439,9 +442,14 @@ export function isRightTurn(v1, v2, v3) {
   }
 }
 
-export function buildFaces(g: CreasesGraph) {
+// Builds a face for each active polygon. Returns an error message as a string if there are at least two inactive hull creases. Returns null if there are no errors.
+export function buildFaces(g: CreasesGraph): null | string {
   if (g.state != CreasesGraphState.Clean) {
-    throw new Error(`Should not be calling buildFaces from state ${g.state}.`);
+    throw new Error(
+      `Should not be calling buildFaces from state ${
+        CreasesGraphState[g.state]
+      }.`
+    );
   }
 
   // Compute convex hull using Graham Scan with tolerance.
@@ -521,7 +529,10 @@ export function buildFaces(g: CreasesGraph) {
   ) as Crease;
   edgeQueue.add(firstEdgeOfConvexHull);
   undiscoveredEdges.delete(firstEdgeOfConvexHull);
-  function fillInFaceToTheLeft(vStart: CreasesNode, eStart: Crease) {
+  function fillInFaceToTheLeft(
+    vStart: CreasesNode,
+    eStart: Crease
+  ): null | string {
     const face = new Face();
     g.faces.add(face);
     if (
@@ -560,18 +571,16 @@ export function buildFaces(g: CreasesGraph) {
           if (face.inactiveHullEdge == null) {
             face.inactiveHullEdge = e;
           } else {
-            throw new Error(
-              `Face ${face.nodes.map(
-                n => n.id
-              )} has at least two inactive hull edges: ${face.inactiveHullEdge.idString()} and ${e.idString()}.`
-            );
+            return `Face ${face.nodes.map(
+              n => n.id
+            )} has at least two inactive hull edges: ${face.inactiveHullEdge.idString()} and ${e.idString()}.`;
           }
         }
       }
       v = e.getOtherNode(v) as CreasesNode;
       e = v.clockwise(e) as Crease;
       if (v == vStart && e == eStart) {
-        return;
+        return null;
       } else if (undiscoveredEdges.delete(e)) {
         edgeQueue.add(e);
       }
@@ -582,10 +591,16 @@ export function buildFaces(g: CreasesGraph) {
     const e = getAnyElement(edgeQueue);
     edgeQueue.delete(e);
     if (e.leftFace == null) {
-      fillInFaceToTheLeft(e.from as CreasesNode, e);
+      const errorMessage = fillInFaceToTheLeft(e.from as CreasesNode, e);
+      if (errorMessage != null) {
+        return errorMessage;
+      }
     }
     if (e.rightFace == null) {
-      fillInFaceToTheLeft(e.to as CreasesNode, e);
+      const errorMessage = fillInFaceToTheLeft(e.to as CreasesNode, e);
+      if (errorMessage != null) {
+        return errorMessage;
+      }
     }
   }
 
@@ -603,6 +618,54 @@ export function buildFaces(g: CreasesGraph) {
   }
 
   g.state = CreasesGraphState.PreUMA;
+  return null;
+}
+
+export function isTwisted(
+  d: Map<string, Map<string, Array<[string, number]>>>,
+  g: CreasesGraph
+) {
+  if (g.state != CreasesGraphState.PreUMA) {
+    throw new Error(
+      `Should not be calling isTwisted from state ${
+        CreasesGraphState[g.state]
+      }.`
+    );
+  }
+  for (const face of g.faces) {
+    if (face.isOuterFace) {
+      continue;
+    }
+    const visitedEdgeStrings: Set<string> = new Set();
+    for (let faceIndex = 0; faceIndex < face.nodes.length; faceIndex++) {
+      const vStart = face.nodes[faceIndex] as CreasesNode;
+      const vEnd = face.nodes[
+        (faceIndex + 1) % face.nodes.length
+      ] as CreasesNode;
+      //console.log(`vStart: ${vStart.id}  vEnd: ${vEnd.id}`);
+      const distancesAlongPath = d.get(vStart.id)?.get(vEnd.id) as Array<
+        [string, number]
+      >;
+      //console.log(distancesAlongPath);
+      const numInternalEdgesToCheck = distancesAlongPath.length - 2;
+      for (
+        let pathIndex = 0;
+        pathIndex < numInternalEdgesToCheck;
+        pathIndex++
+      ) {
+        const id1: string = distancesAlongPath[pathIndex][0];
+        const id2: string = distancesAlongPath[pathIndex + 1][0];
+        const edgeString = id1 + "-" + id2;
+        if (visitedEdgeStrings.has(edgeString)) {
+          return true;
+        } else {
+          //console.log(edgeString);
+          visitedEdgeStrings.add(edgeString);
+        }
+      }
+    }
+  }
+  return false;
 }
 
 export function buildMoleculeRecursive(
@@ -777,7 +840,8 @@ export function buildMoleculeRecursive(
   function getOrMakeNode(
     nodeX: number,
     nodeY: number,
-    checkInsetNodes: boolean
+    checkInsetNodes: boolean,
+    displayId: string
   ): [CreasesNode, boolean] {
     for (const alreadyThereNode of checkInsetNodes
       ? insetNodes
@@ -786,10 +850,18 @@ export function buildMoleculeRecursive(
         Math.abs(alreadyThereNode.x - nodeX) < TOLERANCE &&
         Math.abs(alreadyThereNode.y - nodeY) < TOLERANCE
       ) {
+        if (displayId != "") {
+          alreadyThereNode.displayId = displayId;
+        }
         return [alreadyThereNode, false] as [CreasesNode, boolean];
       }
     }
-    const newNode = new CreasesNode(g.nextInternalId(), nodeX, nodeY);
+    const newNode = new CreasesNode(
+      g.nextInternalId(),
+      displayId,
+      nodeX,
+      nodeY
+    );
     //console.log(`Making new node from getOrMake - ${newNode.id} at (${nodeX}, ${nodeY}).`);
     return [newNode, true] as [CreasesNode, boolean];
   }
@@ -801,7 +873,8 @@ export function buildMoleculeRecursive(
     const [insetNode, madeNewNode] = getOrMakeNode(
       insetNodeX,
       insetNodeY,
-      true
+      true,
+      ""
     );
     if (madeNewNode) {
       insetNodes.push(insetNode);
@@ -899,7 +972,8 @@ export function buildMoleculeRecursive(
             const [hingeNodeOnJRidge, madeNewNode] = getOrMakeNode(
               (1 - fractionOver) * nodeJ.x + fractionOver * insetNodeJ.x,
               (1 - fractionOver) * nodeJ.y + fractionOver * insetNodeJ.y,
-              false
+              false,
+              internalNodeId
             );
             if (madeNewNode) {
               g.addNode(hingeNodeOnJRidge);
@@ -922,6 +996,7 @@ export function buildMoleculeRecursive(
         } else if (insetDistanceToInternalNode < TOLERANCE) {
           // Hinge crease intersects ridge vertex j exactly.
           if (adjacentOnBoundary) {
+            insetNodeJ.displayId = internalNodeId;
             const newCrease = new Crease(
               insetNodeJ,
               internalNode,
@@ -937,13 +1012,14 @@ export function buildMoleculeRecursive(
             const [hingeNodeOnInsetBoundary, madeNewNode] = getOrMakeNode(
               (1 - fractionOver) * insetNodeJ.x + fractionOver * insetNodeI.x,
               (1 - fractionOver) * insetNodeJ.y + fractionOver * insetNodeI.y,
-              false
+              false,
+              internalNodeId
             );
             if (madeNewNode) {
               g.addNode(hingeNodeOnInsetBoundary);
               otherRidgeNodesArray.push(hingeNodeOnInsetBoundary);
               insetZDistances.push([
-                hingeNodeOnInsetBoundary.id,
+                hingeNodeOnInsetBoundary.displayId,
                 insetDistanceToInternalNode,
                 hingeNodeOnInsetBoundary
               ]);
@@ -976,6 +1052,7 @@ export function buildMoleculeRecursive(
           }
         } else if (insetDistanceToInternalNode < insetDistanceToI + TOLERANCE) {
           // Hinge crease intersects ridge vertex i exactly.
+          insetNodeI.displayId = internalNodeId;
           if (adjacentOnBoundary) {
             const newCrease = new Crease(
               insetNodeI,
@@ -997,7 +1074,8 @@ export function buildMoleculeRecursive(
             const [hingeNodeOnIRidge, madeNewNode] = getOrMakeNode(
               (1 - fractionOver) * nodeI.x + fractionOver * insetNodeI.x,
               (1 - fractionOver) * nodeI.y + fractionOver * insetNodeI.y,
-              false
+              false,
+              internalNodeId
             );
             if (madeNewNode) {
               g.addNode(hingeNodeOnIRidge);
@@ -1023,7 +1101,11 @@ export function buildMoleculeRecursive(
           );
         }
       }
-      insetZDistances.push([insetNodeI.id, insetDistanceToI, insetNodeI]);
+      insetZDistances.push([
+        insetNodeI.displayId,
+        insetDistanceToI,
+        insetNodeI
+      ]);
     }
   }
   if (finalRidgeCreaseNode1 != null) {
@@ -1133,6 +1215,7 @@ export function buildMoleculeRecursive(
                   distanceToInternalNode / distanceFromStartToEnd;
                 const nextNode = new CreasesNode(
                   g.nextInternalId(),
+                  internalNodeId,
                   (1 - fractionOver) * activePathStartNode.x +
                     fractionOver * activePathEndNode.x,
                   (1 - fractionOver) * activePathStartNode.y +
@@ -1179,7 +1262,7 @@ export function buildMoleculeRecursive(
 // Defines z map from d and scale factor, subdividing creases for internal nodes as needed.
 export function subdivideCreasesInitial(
   g: CreasesGraph,
-  d: Map<string, Map<string, Map<string, number>>>,
+  d: Map<string, Map<string, Array<[string, number]>>>,
   scaleFactor: number
 ): [
   Map<
@@ -1197,7 +1280,7 @@ export function subdivideCreasesInitial(
   const inactiveHullCreases: Set<Crease> = new Set();
   for (let i = 0; i < nn; i++) {
     const nodeI = nodeList[i] as CreasesNode;
-    const dMap = d.get(nodeI.id) as Map<string, Map<string, number>>;
+    const dMap = d.get(nodeI.id) as Map<string, Array<[string, number]>>;
     const zDistanceMap: Map<
       CreasesNode,
       Array<[string, number, CreasesNode | null]>
@@ -1206,13 +1289,12 @@ export function subdivideCreasesInitial(
     for (let j = i + 1; j < nn; j++) {
       const nodeJ = nodeList[j] as CreasesNode;
       let crease = g.getEdge(nodeI, nodeJ);
-      const distances = dMap.get(nodeJ.id) as Map<string, number>;
+      const distances = dMap.get(nodeJ.id) as Array<[string, number]>;
       const zDistances: Array<[string, number, CreasesNode | null]> = [];
       zDistanceMap.set(nodeJ, zDistances);
-      const sortedDistances = Array.from(distances).sort((x, y) => x[1] - y[1]);
-      const numInternalNodes = sortedDistances.length - 1;
+      const numInternalNodes = distances.length - 1;
       const totalDistance =
-        (sortedDistances[numInternalNodes][1] as number) +
+        (distances[numInternalNodes][1] as number) +
         (g.leafExtensions.get(nodeI) as number) +
         (g.leafExtensions.get(nodeJ) as number);
       if (crease != undefined && crease.creaseType == CreaseType.InactiveHull) {
@@ -1222,7 +1304,7 @@ export function subdivideCreasesInitial(
           const [
             internalNodeId,
             distanceToInternalNodeWithoutLeafExtension
-          ] = sortedDistances[k] as [string, number];
+          ] = distances[k] as [string, number];
           const distanceToInternalNode =
             distanceToInternalNodeWithoutLeafExtension +
             (g.leafExtensions.get(nodeI) as number);
@@ -1233,7 +1315,8 @@ export function subdivideCreasesInitial(
             const newNode = g.subdivideCrease(
               crease,
               (1 - fractionOver) * nodeI.x + fractionOver * nodeJ.x,
-              (1 - fractionOver) * nodeI.y + fractionOver * nodeJ.y
+              (1 - fractionOver) * nodeI.y + fractionOver * nodeJ.y,
+              internalNodeId
             );
             crease = g.getEdge(newNode, nodeJ) as Crease;
             if (crease == undefined) {
@@ -1243,7 +1326,7 @@ export function subdivideCreasesInitial(
               );
             }
             zDistances.push([
-              newNode.id,
+              newNode.displayId,
               distanceToInternalNode * scaleFactor,
               newNode
             ]);
@@ -1271,12 +1354,14 @@ export function subdivideCreasesInitial(
 
 export function generateMolecules(
   g: CreasesGraph,
-  d: Map<string, Map<string, Map<string, number>>>,
+  d: Map<string, Map<string, Array<[string, number]>>>,
   scaleFactor: number
 ) {
   if (g.state != CreasesGraphState.PreUMA) {
     throw new Error(
-      `Should not be calling generateMolecules from state ${g.state}.`
+      `Should not be calling generateMolecules from state ${
+        CreasesGraphState[g.state]
+      }.`
     );
   }
 
@@ -1360,7 +1445,7 @@ export function generateMolecules(
         const x = dx * lambda + x1;
         const y = dy * lambda + y1;
 
-        const newNode = g.subdivideCrease(baseCrease, x, y);
+        const newNode = g.subdivideCrease(baseCrease, x, y, n.displayId);
         baseCrease = g.getEdge(endNode, newNode) as Crease;
         const newCrease = new Crease(n, newNode, creaseType);
         g.addEdge(newCrease);
@@ -1369,7 +1454,7 @@ export function generateMolecules(
   }
 
   // Fill in new faces.
-  g.subdivideFace(outerFace, newCreases);
+  g.rebuildFaces(outerFace, newCreases);
 
   g.state = CreasesGraphState.PostUMA;
 }

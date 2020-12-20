@@ -53,6 +53,20 @@ export function fiveStarPacking() {
   return packing;
 }
 
+export function fiveStarBadPacking() {
+  const v2 = new PackingNode("2", 0.5, 0);
+  const v3 = new PackingNode("3", 0.5, 1);
+  const v4 = new PackingNode("4", 0, 1);
+  const v5 = new PackingNode("5", 0, 0);
+  const packing = new Packing();
+  packing.scaleFactor = 1 / 12;
+  packing.nodes.set("2", v2);
+  packing.nodes.set("3", v3);
+  packing.nodes.set("4", v4);
+  packing.nodes.set("5", v5);
+  return packing;
+}
+
 export function starTree(lengths: number[]) {
   const centralVertex = new TreeNode("0", 0, 0);
   const tree = new TreeGraph();
@@ -233,50 +247,17 @@ export function bonePacking() {
   return packing;
 }
 
-export function nullFromEdgeBugTree() {
-  const v4 = new TreeNode("4", 0, 1);
-  const v3 = new TreeNode("3", 1, 1);
-  const v2 = new TreeNode("2", 0.5, 0.7);
-  const v1 = new TreeNode("1", 0.5, 0.3);
-  const v5 = new TreeNode("5", 0, 0);
-  const v6 = new TreeNode("6", 0.5, 0);
-  const v7 = new TreeNode("7", 1, 0);
-  const tree = new TreeGraph();
-  tree.addNode(v1);
-  tree.addNode(v2);
-  tree.addNode(v3);
-  tree.addNode(v4);
-  tree.addNode(v5);
-  tree.addNode(v6);
-  tree.addNode(v7);
-  const e13 = new TreeEdge(v3, v1, 1);
-  const e23 = new TreeEdge(v3, v2, 1);
-  const e34 = new TreeEdge(v4, v3, 1);
-  const e45 = new TreeEdge(v5, v4, 1);
-  const e46 = new TreeEdge(v6, v4, 1);
-  const e47 = new TreeEdge(v7, v4, 1);
-  tree.addEdge(e13);
-  tree.addEdge(e23);
-  tree.addEdge(e34);
-  tree.addEdge(e45);
-  tree.addEdge(e46);
-  tree.addEdge(e47);
-  return tree;
-}
-
-export function nullFromEdgeBugPacking() {
+export function twistedBonePacking() {
   const packing = new Packing();
-  packing.scaleFactor = 0.2272696953;
-  const v3 = new PackingNode("3", 0.43, 0);
-  packing.nodes.set("3", v3);
-  const v4 = new PackingNode("4", 1, 0.0446);
-  packing.nodes.set("4", v4);
-  const v5 = new PackingNode("5", 1, 1);
-  packing.nodes.set("5", v5);
-  const v6 = new PackingNode("6", 0.45, 1);
-  packing.nodes.set("6", v6);
-  const v7 = new PackingNode("7", 0, 0.67);
+  packing.scaleFactor = 1 / 15;
+  const v1 = new PackingNode("1", 0.3, 0.7);
+  packing.nodes.set("1", v1);
+  const v7 = new PackingNode("7", 0.7, 0.7);
   packing.nodes.set("7", v7);
+  const v6 = new PackingNode("6", 0.3, 0.3);
+  packing.nodes.set("6", v6);
+  const v2 = new PackingNode("2", 0.7, 0.3);
+  packing.nodes.set("2", v2);
   return packing;
 }
 

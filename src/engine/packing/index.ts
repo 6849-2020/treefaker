@@ -2,7 +2,7 @@ import { matrix, math } from "mathjs";
 
 const TOLERANCE = 0.000001;
 const UPDATE_TOLERANCE = TOLERANCE * 5;
-const BINARY_SEARCH_TOLERANCE = TOLERANCE / 4;
+const BINARY_SEARCH_TOLERANCE = TOLERANCE / 32;
 const IS_RIGHT_TURN_CUTOFF_1 = -Math.PI - TOLERANCE;
 const IS_RIGHT_TURN_CUTOFF_2 = Math.PI - TOLERANCE;
 const IS_RIGHT_TURN_CUTOFF_3 = -2 * Math.PI + TOLERANCE;
@@ -118,12 +118,14 @@ class Packing {
 }
 
 class CreasesNode extends PackingNode {
+  displayId: string;
   faces: Face[];
   onBoundaryOfSquare: boolean;
   goUpRidge: CreasesNode | null;
 
-  constructor(id: string, x: number, y: number) {
+  constructor(id: string, displayId: string, x: number, y: number) {
     super(id, x, y);
+    this.displayId = displayId;
     this.faces = [];
     this.onBoundaryOfSquare =
       x < TOLERANCE || y < TOLERANCE || x > 1 - TOLERANCE || y > 1 - TOLERANCE;
@@ -291,34 +293,36 @@ class Graph<N extends Node, E extends Edge> {
 
 class TreeGraph extends Graph<TreeNode, TreeEdge> {
   // Returns d such that, for all leaf nodes a and b, d.get(a).get(b).get(c) is the tree distance from a to c on the path to b.
-  getDistances(): Map<string, Map<string, Map<string, number>>> {
+  getDistances(): Map<string, Map<string, Array<[string, number]>>> {
     const d = new Map();
     for (const fromNodeId of this.nodes.keys()) {
       const fromNode = this.nodes.get(fromNodeId) as TreeNode;
-      const distancesTo = new Map();
-      this.getDistancesRecursive(
-        distancesTo,
-        0,
-        new Map(),
-        fromNode,
-        fromNode.edges[0] as TreeEdge
-      );
-      d.set(fromNodeId, distancesTo);
+      if (fromNode.edges.length == 1) {
+        const distancesTo = new Map();
+        this.getDistancesRecursive(
+          distancesTo,
+          0,
+          [],
+          fromNode,
+          fromNode.edges[0] as TreeEdge
+        );
+        d.set(fromNodeId, distancesTo);
+      }
     }
     return d;
   }
 
   // Helper function for getDistances.
   getDistancesRecursive(
-    distancesTo: Map<string, Map<string, number>>,
+    distancesTo: Map<string, Array<[string, number]>>,
     distanceSoFar: number,
-    distancesAlongPath: Map<string, number>,
+    distancesAlongPath: Array<[string, number]>,
     fromNode: TreeNode,
     e: TreeEdge
   ) {
     distanceSoFar += e.length;
     const toNode = e.getOtherNode(fromNode);
-    distancesAlongPath.set(toNode.id, distanceSoFar);
+    distancesAlongPath.push([toNode.id, distanceSoFar]);
     if (toNode.edges.length == 1) {
       distancesTo.set(toNode.id, distancesAlongPath);
     } else {
@@ -327,7 +331,7 @@ class TreeGraph extends Graph<TreeNode, TreeEdge> {
           this.getDistancesRecursive(
             distancesTo,
             distanceSoFar,
-            new Map(distancesAlongPath),
+            Array.from(distancesAlongPath),
             toNode,
             ePrime as TreeEdge
           );
@@ -360,7 +364,12 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
     this.nextInternalNodeIndex = 1;
     for (const nodeId of p.nodes.keys()) {
       const packingNode = p.nodes.get(nodeId) as PackingNode;
-      const creasesNode = new CreasesNode(nodeId, packingNode.x, packingNode.y);
+      const creasesNode = new CreasesNode(
+        nodeId,
+        nodeId,
+        packingNode.x,
+        packingNode.y
+      );
       this.addNode(creasesNode);
       this.leafExtensions.set(creasesNode, 0);
     }
@@ -372,7 +381,7 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
   }
 
   // Splits a crease into two pieces, returning the node inserted in the middle. Does not check that x and y are actually coordinates of a point in the middle of the crease e.
-  subdivideCrease(e: Crease, x: number, y: number) {
+  subdivideCrease(e: Crease, x: number, y: number, displayId: string) {
     if (this.state != CreasesGraphState.PreUMA) {
       throw new Error(`Do not call subdivideCrease from state ${this.state}.`);
     }
@@ -385,7 +394,7 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
     const creaseType = e.creaseType;
 
     this.removeEdge(e);
-    const newNode = new CreasesNode(this.nextInternalId(), x, y);
+    const newNode = new CreasesNode(this.nextInternalId(), displayId, x, y);
     this.addNode(newNode);
     const firstCrease = new Crease(newNode, fromNode, creaseType);
     this.addEdge(firstCrease);
@@ -487,19 +496,25 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
     );
   }
 
-  // Makes new faces to either side of every crease in newCreases, as long as the faces to the left and right of each crease are unset or equal to the old face being subdivided.
-  subdivideFace(face: Face, newCreases: Set<Crease>) {
-    const newFaces: Array<Face> = [];
+  // Makes new faces to either side of every crease in newCreases, leaving theOuterFace untouched.
+  rebuildFaces(theOuterFace: Face, newCreases: Set<Crease>) {
+    const oldFaces = this.faces;
+    oldFaces.delete(theOuterFace);
+    this.faces = new Set([theOuterFace]);
     for (const e of newCreases) {
-      if (e.leftFace == null || e.leftFace == face) {
-        newFaces.push(this.fillInFaceToTheLeft(e.from as CreasesNode, e));
+      if (e.leftFace == null || oldFaces.has(e.leftFace)) {
+        this.fillInFaceToTheLeft(e.from as CreasesNode, e);
       }
-      if (e.rightFace == null || e.rightFace == face) {
-        newFaces.push(this.fillInFaceToTheLeft(e.to as CreasesNode, e));
+      if (e.rightFace == null || oldFaces.has(e.rightFace)) {
+        this.fillInFaceToTheLeft(e.to as CreasesNode, e);
       }
     }
-    this.faces.delete(face);
-    return newFaces;
+    const eulerChar = this.nodes.size - this.edges.size + this.faces.size;
+    if (eulerChar != 2) {
+      throw new Error(
+        `Euler characteristic check failed after building faces: v=${this.nodes.size}, e=${this.edges.size}, f=${this.faces.size}`
+      );
+    }
   }
 }
 

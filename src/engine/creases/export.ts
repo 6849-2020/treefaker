@@ -7,7 +7,7 @@ import {
   CreasesNode,
   Crease,
   MVAssignment,
-  Face,
+  Face
 } from "../packing";
 
 function edgeAssignmentShort(mv: MVAssignment): string {
@@ -22,6 +22,11 @@ function edgeAssignmentShort(mv: MVAssignment): string {
       // Once facet ordering is fully implemented, this case should no
       // longer occur by the time we reach the export step.
       return "B";
+    case MVAssignment.Unknown:
+      // TODO (@pjrule): it was not exporting axial creases so I added
+      // this, following your pattern for Tristate folds, and it worked.
+      // I think this just draws the lines; the folds are there either way.
+      return "B";
     case MVAssignment.Boundary:
       return "B";
   }
@@ -34,11 +39,10 @@ export function generateFold(graph: CreasesGraph) {
   const assignments: string[] = [];
   const angles: (number | null)[] = [];
   const faceVertices: number[][] = [];
-  const faceEdges: number[][] = [];
 
   const vertexOrder = Array.from(graph.nodes.keys()).sort();
   const edgeOrder = Array.from(graph.edges.keys()).sort();
-  const vertexEdges: number[][] = vertexOrder.map((x) => []);
+  const vertexEdges: number[][] = vertexOrder.map(x => []);
 
   for (const vid of vertexOrder) {
     const node = graph.nodes.get(vid) as CreasesNode;
@@ -69,13 +73,7 @@ export function generateFold(graph: CreasesGraph) {
     }
   }
   for (const face of graph.faces) {
-    // TODO (@pjrule): the isOuterFace flag does not always
-    // seem to be reliable, so we ignore the largest face.
-    // However, we ought to fix the flag in the future.
-    const maxFaceSize = Math.max(
-      ...Array.from(graph.faces).map((f: Face) => f.nodes.length)
-    );
-    if (face.nodes.length < maxFaceSize) {
+    if (!face.isOuterFace) {
       const nodeIds: number[] = [];
       const reversedNodes: CreasesNode[] = Object.assign(
         [],
@@ -98,6 +96,6 @@ export function generateFold(graph: CreasesGraph) {
     edges_assignment: assignments,
     edges_foldAngle: angles,
     vertices_edges: vertexEdges,
-    faces_vertices: faceVertices,
+    faces_vertices: faceVertices
   };
 }

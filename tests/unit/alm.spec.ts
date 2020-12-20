@@ -5,9 +5,8 @@ import { expect } from "chai";
 import { zeros, size } from "mathjs";
 import {
   toMatrix,
-  filterLeaves,
   genConstraints,
-  genGradConstraints,
+  genGradConstraints
 } from "../../src/engine/packing/constraints";
 import { solve } from "../../src/engine/packing/alm";
 import {
@@ -15,7 +14,7 @@ import {
   threeNodeSuboptimalTree,
   tenStarSuboptimalTree,
   demaineLangPaperSmallTree,
-  crabTree,
+  crabTree
 } from "../helper";
 
 const TEST_CASES = {
@@ -23,7 +22,7 @@ const TEST_CASES = {
   "star tree (3 nodes)": threeNodeSuboptimalTree,
   "Demaine & Lang small example tree": demaineLangPaperSmallTree,
   "star tree (10 nodes)": tenStarSuboptimalTree,
-  "crab tree (by Jason Ku)": crabTree,
+  "crab tree (by Jason Ku)": crabTree
   // TODO (@pjrule): improve solver to cover these cases
   // w/o perturbation.
   /*
@@ -34,26 +33,26 @@ const TEST_CASES = {
 const BOX_TOL = 1e-5;
 const OVERLAP_TOL = 1e-5;
 
-Object.entries(TEST_CASES).forEach((testCase) => {
+Object.entries(TEST_CASES).forEach(testCase => {
   const [testName, testFn] = testCase;
   // see https://stackoverflow.com/a/30815171
   describe("ALM disk packing solver: " + testName, function() {
     const tree = testFn();
-    const leafDistances = filterLeaves(tree);
-    const distanceMatrix = toMatrix(leafDistances);
+    const d = tree.getDistances();
+    const distanceMatrix = toMatrix(d);
     const constraints = {
       constraints: genConstraints(distanceMatrix),
-      grad: genGradConstraints(distanceMatrix),
+      grad: genGradConstraints(distanceMatrix)
     };
-    const n = leafDistances.size;
+    const n = d.size;
     const solSize = 2 * n + 1;
     const initSol = zeros([solSize]);
 
     const treeNodes = Array.from(tree.nodes.values());
-    const minX = Math.min(...treeNodes.map((n) => n.x));
-    const maxX = Math.max(...treeNodes.map((n) => n.x));
-    const minY = Math.min(...treeNodes.map((n) => n.y));
-    const maxY = Math.max(...treeNodes.map((n) => n.y));
+    const minX = Math.min(...treeNodes.map(n => n.x));
+    const maxX = Math.max(...treeNodes.map(n => n.x));
+    const minY = Math.min(...treeNodes.map(n => n.y));
+    const maxY = Math.max(...treeNodes.map(n => n.y));
 
     let nodeIdx = 0;
     for (const node of tree.nodes.values()) {
