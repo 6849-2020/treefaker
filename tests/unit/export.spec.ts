@@ -2,7 +2,7 @@ import { expect } from "chai";
 import {
   cleanPacking,
   buildFaces,
-  generateMolecules,
+  generateMolecules
 } from "../../src/engine/creases";
 import { generateFold } from "../../src/engine/creases/export";
 import { fiveStarTree, fiveStarPacking } from "../helper";

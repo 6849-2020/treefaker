@@ -21,7 +21,8 @@ import {
   cleanPacking,
   buildFaces,
   generateMolecules,
-  subdivideCreasesInitial
+  subdivideCreasesInitial,
+  isTwisted
 } from "../../src/engine/creases";
 import {
   fiveStarTree,
@@ -37,9 +38,7 @@ import {
   demaineLangPaperSmallTree,
   demaineLangPaperSmallPacking,
   boneTree,
-  bonePacking,
-  nullFromEdgeBugTree,
-  nullFromEdgeBugPacking
+  bonePacking
 } from "../helper";
 
 describe("subdivideCreasesInitial", function() {
@@ -48,7 +47,7 @@ describe("subdivideCreasesInitial", function() {
     const p = demaineLangPaperSmallPacking();
     const d = tree.getDistances();
     const g = cleanPacking(p, d);
-    buildFaces(g);
+    expect(buildFaces(g)).to.be.null;
     const [z, inactiveHullCreases] = subdivideCreasesInitial(
       g,
       d,
@@ -82,7 +81,7 @@ describe("generateMolecules", function() {
     const p = fiveStarPacking();
     const d = tree.getDistances();
     const g = cleanPacking(p, d);
-    buildFaces(g);
+    expect(buildFaces(g)).to.be.null;
     generateMolecules(g, d, p.scaleFactor);
     expect(g.nodes.size).to.equal(9);
     expect(g.edges.size).to.equal(16);
@@ -101,7 +100,8 @@ describe("generateMolecules", function() {
     const p = rabbitEarOnSidePacking();
     const d = tree.getDistances();
     const g = cleanPacking(p, d);
-    buildFaces(g);
+    expect(buildFaces(g)).to.be.null;
+    expect(isTwisted(d, g)).to.be.false;
     generateMolecules(g, d, p.scaleFactor);
     expect(g.nodes.size).to.equal(7);
     expect(g.edges.size).to.equal(12);
@@ -118,7 +118,8 @@ describe("generateMolecules", function() {
     const p = bonePacking();
     const d = tree.getDistances();
     const g = cleanPacking(p, d);
-    buildFaces(g);
+    expect(buildFaces(g)).to.be.null;
+    expect(isTwisted(d, g)).to.be.false;
     generateMolecules(g, d, p.scaleFactor);
     expect(g.nodes.size).to.equal(15);
     expect(g.edges.size).to.equal(26);
@@ -146,7 +147,7 @@ describe("generateMolecules", function() {
     const p = demaineLangPaperSmallPacking();
     const d = tree.getDistances();
     const g = cleanPacking(p, d);
-    buildFaces(g);
+    expect(buildFaces(g)).to.be.null;
     generateMolecules(g, d, p.scaleFactor);
     //console.log(Array.from(g.edges.values()).map(e => CreaseType[e.creaseType]));
     expect(g.nodes.size).to.equal(30);
@@ -159,14 +160,8 @@ describe("generateMolecules", function() {
     const p = tenStarSuboptimalPacking();
     const d = tree.getDistances();
     const g = cleanPacking(p, d);
-    buildFaces(g);
+    expect(buildFaces(g)).to.be.null;
+    expect(isTwisted(d, g)).to.be.false;
     generateMolecules(g, d, p.scaleFactor);
-  });
-
-  it("does not throw error on example that generated null internal node bug", function() {
-    const tree = demaineLangPaperSmallTree();
-    const p = demaineLangPaperSmallPacking();
-    const d = tree.getDistances();
-    const g = cleanPacking(p, d);
   });
 });

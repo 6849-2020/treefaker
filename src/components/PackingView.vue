@@ -7,15 +7,20 @@ import Vuex from "vuex";
 import { Component, Prop, Vue } from "vue-property-decorator";
 import { JSXGraph, Board } from "jsxgraph";
 import { zeros, size, random, add, multiply, matrix } from "mathjs";
-import { Packing, PackingNode, TreeGraph, TreeNode, CreasesGraph } from "../engine/packing";
+import {
+  Packing,
+  PackingNode,
+  TreeGraph,
+  TreeNode,
+  CreasesGraph
+} from "../engine/packing";
 import {
   genConstraints,
   genGradConstraints,
-  toMatrix,
-  filterLeaves
+  toMatrix
 } from "../engine/packing/constraints";
 import { solve } from "../engine/packing/alm";
-import { cleanPacking } from "../engine/creases";
+import { cleanPacking, buildFaces, isTwisted } from "../engine/creases";
 
 @Component
 export default class PackingView extends Vue {
@@ -55,20 +60,20 @@ export default class PackingView extends Vue {
         leafLengths.set(key, node.edges[0].length);
       }
     });
-    const leafDistances = filterLeaves(treeGraph);
-    if (leafDistances.size === treeGraph.nodes.size) {
+    const d = treeGraph.getDistances();
+    if (d.size === treeGraph.nodes.size) {
       this.$store.commit(
         "updateGlobalError",
         "Add at least one non-leaf vertex to the tree."
       );
       return;
     }
-    const distanceMatrix = toMatrix(leafDistances);
+    const distanceMatrix = toMatrix(d);
 
     // Generate an initial solution from the user's placement of the nodes.
     const n = size(distanceMatrix)[0];
     const initSol = zeros([2 * n + 1]);
-    const vKeys = Array.from(leafDistances.keys()).sort();
+    const vKeys = Array.from(d.keys()).sort();
     const nodes = (this.$store.state as any).treeGraph.nodes;
     vKeys.forEach(function(key, idx) {
       initSol[idx] = nodes.get(key).x;
@@ -78,75 +83,109 @@ export default class PackingView extends Vue {
     // Generate a (not necessarily optimal) disk packing.
     // If the solver fails to converge, perturb the problem slightly and retry.
     return new Promise(resolve => {
-      let sol: matrix | undefined = undefined;
-      for (let trial = 0; trial <= 5 && sol === undefined; trial++) {
-        const perturbedDists = add(
-          distanceMatrix,
-          multiply(PERTURB_EPS, random(size(distanceMatrix)))
-        );
-        const perturbedConstraints = {
-          constraints: genConstraints(perturbedDists),
-          grad: genGradConstraints(perturbedDists)
-        };
-        const perturbedInitSol = add(
-          initSol,
-          multiply(PERTURB_EPS, random(size(initSol)))
-        );
-        sol = solve(perturbedInitSol, perturbedDists, perturbedConstraints);
-      }
-      if (sol === undefined) {
-        this.$store.commit(
-          "updateGlobalError",
-          "Could not generate disk packing from tree."
-        );
-        return;
-      }
+      let twisted = true;
+      let finalErrorMessage = "Did not update error message.";
+      for (let attempt = 0; twisted && attempt < 6; attempt++) {
+        let sol: matrix | undefined = undefined;
+        for (let trial = 0; trial < 6 && sol === undefined; trial++) {
+          const perturbedDists = add(
+            distanceMatrix,
+            multiply(PERTURB_EPS, random(size(distanceMatrix)))
+          );
+          const perturbedConstraints = {
+            constraints: genConstraints(perturbedDists),
+            grad: genGradConstraints(perturbedDists)
+          };
+          const perturbedInitSol = add(
+            initSol,
+            multiply(PERTURB_EPS, random(size(initSol)))
+          );
+          sol = solve(perturbedInitSol, perturbedDists, perturbedConstraints);
+        }
+        if (sol === undefined) {
+          this.$store.commit(
+            "updateGlobalError",
+            "Could not generate disk packing from tree."
+          );
+          return;
+        }
 
-      const packing = new Packing();
-      packing.scaleFactor = sol[2 * n];
-      for (let i = 0; i < n; i++) {
-        // TODO (@pjrule): better typing here?
-        const id = vKeys[i] as string;
-        const x = sol[i];
-        const y = sol[i + n];
-        packing.nodes.set(id, new PackingNode(id, x, y));
-      }
+        const packing = new Packing();
+        packing.scaleFactor = sol[2 * n];
+        for (let i = 0; i < n; i++) {
+          // TODO (@pjrule): better typing here?
+          const id = vKeys[i] as string;
+          const x = sol[i];
+          const y = sol[i + n];
+          packing.nodes.set(id, new PackingNode(id, x, y));
+        }
 
-      // Clean up the packing to enforce active path invariants.
-      this.$store.commit("updatePacking", packing);
-      try {
-        const cleanedPacking = cleanPacking(packing, leafDistances);
-        this.$store.commit("updateCreasesGraph", cleanedPacking);
+        // Clean up the packing to enforce active path invariants.
+        let cleanedPackingCreasesGraph: null | CreasesGraph = null;
+        try {
+          cleanedPackingCreasesGraph = cleanPacking(packing, d);
+        } catch (err) {
+          this.$store.commit(
+            "updateGlobalError",
+            "Could not clean packing. '" + err.message + "'"
+          );
+          return;
+        }
+
+        // Compute convex hull and active polygons.
+        try {
+          const possibleErrorMessage = buildFaces(cleanedPackingCreasesGraph);
+          if (possibleErrorMessage != null) {
+            finalErrorMessage = possibleErrorMessage;
+            continue;
+          }
+        } catch (err) {
+          this.$store.commit(
+            "updateGlobalError",
+            "Could not build faces: '" + err.message + "'"
+          );
+          return;
+        }
+
+        if (isTwisted(d, cleanedPackingCreasesGraph)) {
+          finalErrorMessage = "Tree is twisted.";
+          continue;
+        }
+        twisted = false;
+        this.$store.commit("updatePacking", packing);
+        this.$store.commit("updateCreasesGraph", cleanedPackingCreasesGraph);
         this.$store.commit("unsync");
-      } catch (err) {
+
+        // Display the packing.
+        // TODO (@pjrule): would it be more efficient to reuse the old board?
+        const creasesGraph = (this.$store.state as any)
+          .creasesGraph as CreasesGraph;
+        const packingBoard = JSXGraph.initBoard("packingViewBox", {
+          boundingbox: [-0.1, 1.1, 1.1, -0.1],
+          showCopyright: false,
+          showNavigation: false
+        });
+        packingBoard.create("grid", []);
+        creasesGraph.nodes.forEach(function(v, idx) {
+          const center = packingBoard.create("point", [v.x, v.y], {
+            name: v.id,
+            fixed: true
+          });
+          const radius =
+            (leafLengths.get(v.id) + creasesGraph.leafExtensions.get(v)) *
+            packing.scaleFactor;
+          packingBoard.create("circle", [center, radius], { fixed: true });
+        });
+        this.packingBoard = packingBoard;
+      }
+      if (twisted) {
         this.$store.commit(
           "updateGlobalError",
-          "Could not clean packing. (" + err.message + ")"
+          "Could not find packing. Error message from final attempt: '" +
+            finalErrorMessage +
+            "'"
         );
-        return;
       }
-
-      // Display the packing.
-      // TODO (@pjrule): would it be more efficient to reuse the old board?
-      const creasesGraph = (this.$store.state as any)
-        .creasesGraph as CreasesGraph;
-      const packingBoard = JSXGraph.initBoard("packingViewBox", {
-        boundingbox: [-0.1, 1.1, 1.1, -0.1],
-        showCopyright: false,
-        showNavigation: false
-      });
-      packingBoard.create("grid", []);
-      creasesGraph.nodes.forEach(function(v, idx) {
-        const center = packingBoard.create("point", [v.x, v.y], {
-          name: v.id,
-          fixed: true
-        });
-        const radius =
-          (leafLengths.get(v.id) + creasesGraph.leafExtensions.get(v)) *
-          packing.scaleFactor;
-        packingBoard.create("circle", [center, radius], { fixed: true });
-      });
-      this.packingBoard = packingBoard;
       resolve(1);
     });
   }

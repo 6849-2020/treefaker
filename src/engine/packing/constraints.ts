@@ -7,7 +7,7 @@
 import { matrix, zeros, size } from "mathjs";
 import { TreeGraph } from ".";
 
-type PackingMap = Map<string, Map<string, Map<string, number>>>;
+type PackingMap = Map<string, Map<string, Array<[string, number]>>>;
 type Constraint = (X: matrix) => number;
 type GradConstraint = (X: matrix) => matrix;
 type ConstraintSet = {
@@ -109,7 +109,7 @@ function genConstraints(dists: matrix): Constraint[] {
     ubConstraint(2 * n, MAX_SCALE),
     ...lbConstraints,
     ...ubConstraints,
-    ...overlapConstraints,
+    ...overlapConstraints
   ];
 }
 
@@ -132,7 +132,7 @@ function genGradConstraints(dists: matrix): GradConstraint[] {
     gradUbConstraint(2 * n, MAX_SCALE, 2 * n + 1),
     ...gradLbConstraints,
     ...gradUbConstraints,
-    ...gradOverlapConstraints,
+    ...gradOverlapConstraints
   ];
 }
 
@@ -146,33 +146,17 @@ function toMatrix(nodes: PackingMap): matrix {
     for (let j = 0; j < n; j++) {
       const jKey = keys[j];
       if (i !== j) {
-        dists[i][j] = nodes
-          .get(iKey)
-          ?.get(jKey)
-          ?.get(jKey);
+        const distancesAlongPath = nodes.get(iKey)?.get(jKey) as Array<
+          [string, number]
+        >;
+        dists[i][j] = (distancesAlongPath[distancesAlongPath.length - 1] as [
+          string,
+          number
+        ])[1] as number;
       }
     }
   }
   return dists;
-}
-
-function filterLeaves(tree: TreeGraph): PackingMap {
-  const leaves = new Set();
-  const leafLengths = new Map();
-  tree.nodes.forEach(function(node, key: string) {
-    if (node.edges.length === 1) {
-      leaves.add(key);
-      leafLengths.set(key, node.edges[0].length);
-    }
-  });
-  const distances = tree.getDistances();
-  const leafDistances = new Map();
-  distances.forEach((dists: any, key: string) => {
-    if (leaves.has(key)) {
-      leafDistances.set(key, dists);
-    }
-  });
-  return leafDistances;
 }
 
 export {
@@ -188,6 +172,5 @@ export {
   gradOverlapConstraint,
   genConstraints,
   genGradConstraints,
-  toMatrix,
-  filterLeaves,
+  toMatrix
 };

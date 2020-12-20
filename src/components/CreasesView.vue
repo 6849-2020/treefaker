@@ -14,7 +14,7 @@ import {
   MVAssignment,
   CreasesNode
 } from "../engine/packing";
-import { buildFaces, generateMolecules, cleanPacking } from "../engine/creases";
+import { generateMolecules, cleanPacking } from "../engine/creases";
 import { fiveStarPacking, fiveStarTree } from "../../tests/helper";
 
 function getColor(mv: MVAssignment): string {
@@ -65,17 +65,8 @@ export default class CreasesView extends Vue {
     const distances = treeGraph.getDistances();
     const packing = (this.$store.state as any).packing as Packing;
 
-    // TODO (@pjrule): the UMA functions mutate objects in place, so we
+    // TODO (@pjrule): the UMA mutates objects in place, so we
     // should make deep copies here to avoid inadvertently mutating global state.
-    try {
-      buildFaces(creasesGraph);
-    } catch (err) {
-      this.$store.commit(
-        "updateGlobalError",
-        "Could not build faces. (" + err.message + ")"
-      );
-      return;
-    }
     try {
       generateMolecules(creasesGraph, distances, packing.scaleFactor);
     } catch (err) {
@@ -86,8 +77,11 @@ export default class CreasesView extends Vue {
       return;
     }
     const points: Map<CreasesNode, any> = new Map();
+    //TODO (@pjrule) Decide how to control displaying internal nodes.
+    const displayInternalNodes = true;
     for (const v of creasesGraph.nodes.values()) {
-      const vertexName = v.id.charAt(0) == "i" ? "" : v.id;
+      const vertexName =
+        !displayInternalNodes && v.id.charAt(0) == "i" ? "" : v.displayId;
       const point = creasesBoard.create("point", [v.x, v.y], {
         name: vertexName,
         fixed: true

@@ -50,7 +50,6 @@ describe("getIndexOfConvexGap", function() {
     g.addEdge(e2);
     g.addEdge(e3);
     g.addEdge(e4);
-    const [indexOfConvexGap, v1t, v2t] = getIndexOfConvexGap(v1);
     expect(getIndexOfConvexGap(v1)).to.eql([null, null, null]);
   });
 

@@ -26,8 +26,8 @@ describe("TreeGraph", function() {
   let v3: TreeNode;
   let tree: TreeGraph;
   let edges: TreeEdge[];
-  let d: Map<string, Map<string, Map<string, number>>>;
-  let dV1V2: Map<string, number>;
+  let d: Map<string, Map<string, Array<[string, number]>>>;
+  let dV1V2: Array<[string, number]>;
   let e1: TreeEdge;
 
   beforeEach(function() {
@@ -46,10 +46,9 @@ describe("TreeGraph", function() {
     tree.addEdge(new TreeEdge(v3, centralNode, 4));
     edges = centralNode.edges as TreeEdge[];
     d = tree.getDistances();
-    dV1V2 = (d.get("v1") as Map<string, Map<string, number>>).get("v2") as Map<
-      string,
-      number
-    >;
+    dV1V2 = (d.get("v1") as Map<string, Array<[string, number]>>).get(
+      "v2"
+    ) as Array<[string, number]>;
   });
 
   it("computes distances correctly on two-node tree", function() {
@@ -57,14 +56,14 @@ describe("TreeGraph", function() {
     const distances = simpleTree.getDistances();
     const distance1 = (distances.get("0") as Map<
       string,
-      Map<string, number>
-    >).get("1") as Map<string, number>;
-    expect(distance1.get("1")).to.equal(2);
+      Array<[string, number]>
+    >).get("1") as Array<[string, number]>;
+    expect(distance1[0]).to.eql(["1", 2]);
     const distance2 = (distances.get("1") as Map<
       string,
-      Map<string, number>
-    >).get("0") as Map<string, number>;
-    expect(distance2.get("0")).to.equal(2);
+      Array<[string, number]>
+    >).get("0") as Array<[string, number]>;
+    expect(distance2[0]).to.eql(["0", 2]);
   });
 
   it("has edges arranged in correct order", function() {
@@ -83,11 +82,7 @@ describe("TreeGraph", function() {
   });
 
   it("computes distances according to edge lengths", function() {
-    expect(dV1V2.get("u")).to.equal(1);
-    expect(dV1V2.get("v2")).to.equal(3);
-  });
-
-  it("does not include off-path vertices when computing distances", function() {
-    expect(dV1V2.get("v3")).to.be.undefined;
+    expect(dV1V2[0]).to.eql(["u", 1]);
+    expect(dV1V2[1]).to.eql(["v2", 3]);
   });
 });
