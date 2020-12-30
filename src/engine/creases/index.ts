@@ -6,6 +6,7 @@ import {
   IS_RIGHT_TURN_CUTOFF_2,
   IS_RIGHT_TURN_CUTOFF_3,
   IS_RIGHT_TURN_CUTOFF_4,
+  getAnyElement,
   Node,
   Edge,
   Face,
@@ -22,13 +23,6 @@ import {
   CreasesGraphState,
   CreasesGraph
 } from "../packing";
-
-function getAnyElement<T>(s: Set<T>) {
-  for (const e of s) {
-    return e;
-  }
-  throw new Error("Set is empty.");
-}
 
 // Returns the minimum distance enforced by the tree constraints in paper-units.
 function activeDistance(
@@ -675,7 +669,8 @@ export function buildMoleculeRecursive(
     CreasesNode,
     Map<CreasesNode, Array<[string, number, CreasesNode | null]>>
   >,
-  newCreases: Set<Crease>
+  newCreases: Set<Crease>,
+  elevation: number
 ) {
   // Compute inset amount h. Cut-and-pasted from TM5 source code:
   // https://github.com/6849-2020/treemaker/blob/75b47cdcd46a45e5de0eba95630119d2828426ad/Source/tmModel/tmTreeClasses/tmPoly.cpp#L719
@@ -832,6 +827,7 @@ export function buildMoleculeRecursive(
       }
     }
   }
+  const newElevation = elevation + h;
 
   // Compute locations of inset nodes and connect with Ridge creases.
   const insetNodes: Array<CreasesNode> = [];
@@ -860,7 +856,8 @@ export function buildMoleculeRecursive(
       g.nextInternalId(),
       displayId,
       nodeX,
-      nodeY
+      nodeY,
+      newElevation
     );
     //console.log(`Making new node from getOrMake - ${newNode.id} at (${nodeX}, ${nodeY}).`);
     return [newNode, true] as [CreasesNode, boolean];
@@ -892,6 +889,10 @@ export function buildMoleculeRecursive(
   const numberOfInsetNodes = insetNodes.length;
   let finalRidgeCreaseNode1: CreasesNode | null = null;
   let finalRidgeCreaseNode2: CreasesNode | null = null;
+  if (insetNodes.length == 2) {
+    [finalRidgeCreaseNode1, finalRidgeCreaseNode2] = insetNodes;
+  }
+  
   for (let i = 0; i < nn; i++) {
     for (let j = i + 1; j < nn; j++) {
       let chopOffFromJ = h * mr[j];
@@ -1023,7 +1024,7 @@ export function buildMoleculeRecursive(
                 insetDistanceToInternalNode,
                 hingeNodeOnInsetBoundary
               ]);
-              if (insetNodes.length == 2) {
+              if (numberOfInsetNodes == 2) {
                 const newCrease = new Crease(
                   hingeNodeOnInsetBoundary,
                   lastNode,
@@ -1141,9 +1142,9 @@ export function buildMoleculeRecursive(
   }
 
   // Recursively build sub-molecules if necessary.
-  if (insetNodes.length > 2) {
+  if (numberOfInsetNodes > 2) {
     //console.log(`Beginning recursive subdivision on inset nodes ${insetNodes.map(n => n.id)}.`);
-    const indexStack = [insetNodes.length - 1, 0];
+    const indexStack = [numberOfInsetNodes - 1, 0];
     for (let numIterations = 0; numIterations < 100; numIterations++) {
       if (indexStack.length == 0) {
         //console.log(`Ending recursive subdivision on ${insetNodes.map(n => n.id)}.`);
@@ -1219,7 +1220,8 @@ export function buildMoleculeRecursive(
                   (1 - fractionOver) * activePathStartNode.x +
                     fractionOver * activePathEndNode.x,
                   (1 - fractionOver) * activePathStartNode.y +
-                    fractionOver * activePathEndNode.y
+                    fractionOver * activePathEndNode.y,
+                  newElevation
                 );
                 //console.log(`Making new gusset node directly - ${nextNode.id} at (${nextNode.x}, ${nextNode.y}).`);
                 g.addNode(nextNode);
@@ -1250,7 +1252,7 @@ export function buildMoleculeRecursive(
           activePathStartIndex = activePathEndIndex;
         }
         //console.log(`Making recursive call on ${newBoundary.map(n => n.id)}.`);
-        buildMoleculeRecursive(g, newBoundary, z, newCreases);
+        buildMoleculeRecursive(g, newBoundary, z, newCreases, newElevation);
       }
     }
     throw new Error(
@@ -1316,7 +1318,8 @@ export function subdivideCreasesInitial(
               crease,
               (1 - fractionOver) * nodeI.x + fractionOver * nodeJ.x,
               (1 - fractionOver) * nodeI.y + fractionOver * nodeJ.y,
-              internalNodeId
+              internalNodeId,
+              0
             );
             crease = g.getEdge(newNode, nodeJ) as Crease;
             if (crease == undefined) {
@@ -1383,7 +1386,7 @@ export function generateMolecules(
   const [z, inactiveHullCreases] = subdivideCreasesInitial(g, d, scaleFactor);
   const newCreases: Set<Crease> = new Set();
   for (const boundary of boundaries) {
-    buildMoleculeRecursive(g, boundary, z, newCreases);
+    buildMoleculeRecursive(g, boundary, z, newCreases, 0);
   }
 
   // Get rid of degree 2 ridge/hinge vertices.
@@ -1445,16 +1448,36 @@ export function generateMolecules(
         const x = dx * lambda + x1;
         const y = dy * lambda + y1;
 
-        const newNode = g.subdivideCrease(baseCrease, x, y, n.displayId);
+        const newNode = g.subdivideCrease(baseCrease, x, y, n.displayId, 0);
         baseCrease = g.getEdge(endNode, newNode) as Crease;
         const newCrease = new Crease(n, newNode, creaseType);
         g.addEdge(newCrease);
       }
     }
   }
+  g.state = CreasesGraphState.PostUMA;
 
-  // Fill in new faces.
+  // Fill in new faces and prep for facet ordering.
   g.rebuildFaces(outerFace, newCreases);
 
-  g.state = CreasesGraphState.PostUMA;
+  g.state = CreasesGraphState.PreFacetOrdering;
 }
+
+export function orderFacets(g: CreasesGraph) {
+  if (g.state != CreasesGraphState.PreFacetOrdering) {
+    throw new Error(
+      `Should not be calling orderFacets from state ${
+        CreasesGraphState[g.state]
+      }.`
+    );
+  }
+  
+  // TODO
+  
+  g.state = CreasesGraphState.FullyAssigned;
+}
+
+
+
+
+

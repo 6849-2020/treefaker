@@ -171,8 +171,8 @@ describe("buildFaces", function() {
     const d = tree.getDistances();
     const g = cleanPacking(p, d);
 
-    const v1 = new CreasesNode("x", "x", 0.25, 0.25);
-    const v2 = new CreasesNode("y", "y", 0.75, 0.75);
+    const v1 = new CreasesNode("x", "x", 0.25, 0.25, 0);
+    const v2 = new CreasesNode("y", "y", 0.75, 0.75, 0);
     const e = new Crease(v2, v1, CreaseType.Gusset);
     g.addNode(v1);
     g.addNode(v2);

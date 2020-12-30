@@ -116,7 +116,7 @@ export default class TreeFaker extends Vue {
   get exportDisabled() {
     return (
       (this.$store as any).state.creasesGraph === undefined ||
-      (this.$store as any).state.creasesGraph.state !== CreasesGraphState.PostUMA
+      (this.$store as any).state.creasesGraph.state !== CreasesGraphState.FullyAssigned
     );
   }
   get inErrorState() {

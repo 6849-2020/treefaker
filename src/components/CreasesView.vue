@@ -14,8 +14,20 @@ import {
   MVAssignment,
   CreasesNode
 } from "../engine/packing";
-import { generateMolecules, cleanPacking } from "../engine/creases";
-import { fiveStarPacking, fiveStarTree } from "../../tests/helper";
+import { generateMolecules, cleanPacking, orderFacets, buildFaces } from "../engine/creases";
+
+import {
+  tenStarSuboptimalTree,
+  tenStarSuboptimalPacking,
+  twoNodeTree,
+  twoNodeAdjacentCornersPacking,
+  rabbitEarOnSideTree,
+  rabbitEarOnSidePacking,
+  demaineLangPaperSmallTree,
+  demaineLangPaperSmallPacking,
+  boneTree,
+  bonePacking
+} from "../../tests/helper";
 
 function getColor(mv: MVAssignment): string {
   switch (mv) {
@@ -58,12 +70,19 @@ export default class CreasesView extends Vue {
       showNavigation: false
     });
     creasesBoard.create("grid", []);
-
+    
     const treeGraph = (this.$store.state as any).treeGraph as TreeGraph;
     const creasesGraph = (this.$store.state as any)
       .creasesGraph as CreasesGraph;
     const distances = treeGraph.getDistances();
     const packing = (this.$store.state as any).packing as Packing;
+    
+    /*/ TODO Replace the five lines above with these to visualize a hard-coded test case.
+    const treeGraph = boneTree();
+    const packing = bonePacking();
+    const distances = treeGraph.getDistances();
+    const creasesGraph = cleanPacking(packing, distances);
+    buildFaces(creasesGraph);*/
 
     // TODO (@pjrule): the UMA mutates objects in place, so we
     // should make deep copies here to avoid inadvertently mutating global state.
@@ -73,6 +92,15 @@ export default class CreasesView extends Vue {
       this.$store.commit(
         "updateGlobalError",
         "Could not generate molecules. (" + err.message + ")"
+      );
+      return;
+    }
+    try {
+      orderFacets(creasesGraph);
+    } catch (err) {
+      this.$store.commit(
+        "updateGlobalError",
+        "Could not order facets. (" + err.message + ")"
       );
       return;
     }
