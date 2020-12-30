@@ -41,6 +41,15 @@ import {
   bonePacking
 } from "../helper";
 
+function getCorridor(g, v1, v2) {
+  const e = g.getEdge(v1, v2);
+  if (e.leftFace.isOuterFace) {
+    return (e.rightFace as Face).corridor as Face[];
+  } else {
+    return (e.leftFace as Face).corridor as Face[];
+  }
+}
+
 describe("subdivideCreasesInitial", function() {
   it("works on small example from paper", function() {
     const tree = demaineLangPaperSmallTree();
@@ -153,6 +162,31 @@ describe("generateMolecules", function() {
     expect(g.nodes.size).to.equal(30);
     expect(g.edges.size).to.equal(55);
     expect(g.faces.size).to.equal(27);
+    
+    const v1 = g.nodes.get("1") as CreasesNode;
+    const v2 = g.nodes.get("2") as CreasesNode;
+    const v7 = g.nodes.get("7") as CreasesNode;
+    const v3Top = v1.edges[2].getOtherNode(v1);
+    const v3TopLeft = v1.edges[0].getOtherNode(v1);
+    const v4Right = v7.edges[1].getOtherNode(v7);
+    const v3Right = v4Right.edges[2].getOtherNode(v4Right);
+    
+    const c1 = getCorridor(g, v1, v3Top);
+    const c2 = Array.from(getCorridor(g, v1, v3TopLeft));
+    expect(c1.length).to.equal(2);
+    expect(c1).to.eql(c2.reverse());
+    
+    const c3 = getCorridor(g, v2, v3Top);
+    const c4 = Array.from(getCorridor(g, v2, v3Right));
+    expect(c3.length).to.equal(8);
+    expect(c3).to.eql(c4.reverse());
+    expect(c3.map(f => f.hasPseudohinge)).to.eql([false, true, true, false, false, false, false, false]);
+    
+    const c5 = getCorridor(g, v3Right, v4Right);
+    expect(c5.length).to.equal(6);
+    const c6 = Array.from((c5[5] as Face).corridor as Face[]);
+    expect(c5).to.eql(c6.reverse());
+    expect((c5[4] as Face).corridor).to.be.null;
   });
 
   it("does not throw error on 10-leaf star tree", function() {

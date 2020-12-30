@@ -2,11 +2,18 @@ import { matrix, math } from "mathjs";
 
 const TOLERANCE = 0.000001;
 const UPDATE_TOLERANCE = TOLERANCE * 5;
-const BINARY_SEARCH_TOLERANCE = TOLERANCE / 32;
+const BINARY_SEARCH_TOLERANCE = TOLERANCE / 1024;
 const IS_RIGHT_TURN_CUTOFF_1 = -Math.PI - TOLERANCE;
 const IS_RIGHT_TURN_CUTOFF_2 = Math.PI - TOLERANCE;
 const IS_RIGHT_TURN_CUTOFF_3 = -2 * Math.PI + TOLERANCE;
 const IS_RIGHT_TURN_CUTOFF_4 = 2 * Math.PI - TOLERANCE;
+
+function getAnyElement<T>(s: Set<T>) {
+  for (const e of s) {
+    return e;
+  }
+  throw new Error("Set is empty.");
+}
 
 function getIdString(id1: string, id2: string) {
   if (id1 > id2) {
@@ -81,19 +88,6 @@ class Edge {
   }
 }
 
-class Face {
-  isOuterFace: boolean;
-  readonly nodes: CreasesNode[];
-  inactiveHullCrease: Crease | null;
-  [key: string]: any;
-
-  constructor() {
-    this.isOuterFace = false;
-    this.nodes = [];
-    this.inactiveHullCrease = null;
-  }
-}
-
 class TreeNode extends Node {}
 
 class TreeEdge extends Edge {
@@ -118,18 +112,20 @@ class Packing {
 }
 
 class CreasesNode extends PackingNode {
-  displayId: string;
+  displayId: string; // The id to be displayed in the GUI.
   faces: Face[];
   onBoundaryOfSquare: boolean;
   goUpRidge: CreasesNode | null;
+  readonly elevation: number;Z
 
-  constructor(id: string, displayId: string, x: number, y: number) {
+  constructor(id: string, displayId: string, x: number, y: number, elevation: number) {
     super(id, x, y);
     this.displayId = displayId;
     this.faces = [];
     this.onBoundaryOfSquare =
       x < TOLERANCE || y < TOLERANCE || x > 1 - TOLERANCE || y > 1 - TOLERANCE;
     this.goUpRidge = null;
+    this.elevation = elevation;
   }
 }
 
@@ -178,6 +174,20 @@ class Crease extends Edge {
       this.assignment = MVAssignment.Unknown;
     }
   }
+  
+  getOtherFace(f: Face): Face {
+    if (f == this.leftFace) {
+      return this.rightFace as Face;
+    } else if (f == this.rightFace) {
+      return this.leftFace as Face;
+    } else {
+      throw new Error("Face not adjacent to edge.");
+    }
+  }
+  
+  sumElevations() {
+    return (this.from as CreasesNode).elevation + (this.to as CreasesNode).elevation;
+  }
 
   constructor(to: CreasesNode, from: CreasesNode, creaseType: CreaseType) {
     super(to, from);
@@ -189,6 +199,31 @@ class Crease extends Edge {
     this.assignment = MVAssignment.Unknown;
 
     this.updateCreaseType(creaseType);
+  }
+}
+
+class Face {
+  isOuterFace: boolean;
+  readonly nodes: CreasesNode[];
+  inactiveHullCrease: Crease | null;
+  crossRidge: Face | null; // The face on the other side of the highest elevation ridge.
+  crossGussetOrPseudohinge: Face | null; // May be null if on boundary of active polyton, indicating end of corridor. 
+  crossHinge: Face | null; // Will be uniquely determined if hasPseudohinge is true.
+  hasPseudohinge: boolean;
+  flap: Set<string>; // Set of 2 tree node ids the face projects down to.
+  corridor : Face[] | null; // Will be non-null if and only if the face is an axial facet.
+  [key: string]: any;
+
+  constructor() {
+    this.isOuterFace = false;
+    this.nodes = [];
+    this.inactiveHullCrease = null;
+    this.crossRidge = null;
+    this.crossGussetOrPseudohinge = null;
+    this.crossHinge = null;
+    this.hasPseudohinge = false;
+    this.flap = new Set();
+    this.corridor = null;
   }
 }
 
@@ -347,6 +382,7 @@ enum CreasesGraphState {
   Clean,
   PreUMA,
   PostUMA,
+  PreFacetOrdering,
   FullyAssigned
 }
 
@@ -368,7 +404,8 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
         nodeId,
         nodeId,
         packingNode.x,
-        packingNode.y
+        packingNode.y,
+        0
       );
       this.addNode(creasesNode);
       this.leafExtensions.set(creasesNode, 0);
@@ -381,7 +418,7 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
   }
 
   // Splits a crease into two pieces, returning the node inserted in the middle. Does not check that x and y are actually coordinates of a point in the middle of the crease e.
-  subdivideCrease(e: Crease, x: number, y: number, displayId: string) {
+  subdivideCrease(e: Crease, x: number, y: number, displayId: string, elevation: number) {
     if (this.state != CreasesGraphState.PreUMA) {
       throw new Error(`Do not call subdivideCrease from state ${this.state}.`);
     }
@@ -394,7 +431,7 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
     const creaseType = e.creaseType;
 
     this.removeEdge(e);
-    const newNode = new CreasesNode(this.nextInternalId(), displayId, x, y);
+    const newNode = new CreasesNode(this.nextInternalId(), displayId, x, y, elevation);
     this.addNode(newNode);
     const firstCrease = new Crease(newNode, fromNode, creaseType);
     this.addEdge(firstCrease);
@@ -423,7 +460,7 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
   suppressNodeIfRedundant(v2: CreasesNode, newCreases: Set<Crease>) {
     if (this.state != CreasesGraphState.PreUMA) {
       throw new Error(
-        `Do not call suppressRidgeNodeIfRedundant from state ${this.state}.`
+        `Do not call suppressRidgeNodeIfRedundant from state ${CreasesGraphState[this.state]}.`
       );
     }
     if (v2.edges.length == 2) {
@@ -461,6 +498,11 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
 
   // Constructs a new face to the left of a crease by traversing the rotation system.
   fillInFaceToTheLeft(vStart: CreasesNode, eStart: Crease) {
+    if (this.state != CreasesGraphState.PostUMA) {
+      throw new Error(
+        `Do not call fillInFaceToTheLeft from state ${CreasesGraphState[this.state]}.`
+      );
+    }
     const face = new Face();
     this.faces.add(face);
     let v = vStart;
@@ -495,9 +537,65 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
       "Caught in infinite loop while filling in new face in UMA."
     );
   }
+  
+  // Sets crossRidge, crossGussetOrPseudohinge, crossHinge, hasPseudohinge, and flap fields, returning set of axial facets.
+  annotateFaceData(face: Face) {
+    if (this.state != CreasesGraphState.PostUMA) {
+      throw new Error(
+        `Do not call annotateFaceData from state ${CreasesGraphState[this.state]}.`
+      );
+    }
+    let isAxialFacet = false;
+    let highestSumElevations = 0;
+    let v1 = face.nodes[face.nodes.length - 1];
+    for (const v2 of face.nodes) {
+      if (v2.displayId != "") {
+        face.flap.add(v2.displayId);
+      }
+      const e = this.getEdge(v1, v2) as Crease;
+      if (e.creaseType == CreaseType.Ridge) {
+        const newSumElevations = e.sumElevations();
+        if (newSumElevations > highestSumElevations) {
+          highestSumElevations = newSumElevations;
+          face.crossRidge = e.getOtherFace(face);
+        }
+      } else if (
+        e.creaseType == CreaseType.Gusset ||
+        e.creaseType == CreaseType.Pseudohinge
+      ) {
+        if (face.crossGussetOrPseudohinge == null) {
+          face.crossGussetOrPseudohinge = e.getOtherFace(face);
+        } else {
+          throw new Error(`Found two gusset/pseudohinge creases on one face, second is ${e.idString()}.`);
+        }
+        if (e.creaseType == CreaseType.Pseudohinge) {
+          face.hasPseudohinge = true;
+        }
+      } else if (e.creaseType == CreaseType.Hinge) {
+        face.crossHinge = e.getOtherFace(face);
+      } else {
+        if (isAxialFacet) {
+          console.log(e);
+          throw new Error(`Found two axial/hull creases on one face, second is ${e.idString()}, which has type ${CreaseType[e.creaseType]}.`);
+        } else {
+          face.corridor = [face];
+          isAxialFacet = true;
+        }
+      }
+      v1 = v2;
+    }
+    return isAxialFacet;
+  }
 
-  // Makes new faces to either side of every crease in newCreases, leaving theOuterFace untouched.
+  // Makes new faces to either side of every crease in newCreases, leaving theOuterFace untouched, then annotates faces with data necessary for facet ordering.
   rebuildFaces(theOuterFace: Face, newCreases: Set<Crease>) {
+    if (this.state != CreasesGraphState.PostUMA) {
+      throw new Error(
+        `Do not call rebuildFaces from state ${CreasesGraphState[this.state]}.`
+      );
+    }
+    
+    // Fill in all faces except theOuterFace.
     const oldFaces = this.faces;
     oldFaces.delete(theOuterFace);
     this.faces = new Set([theOuterFace]);
@@ -515,6 +613,61 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
         `Euler characteristic check failed after building faces: v=${this.nodes.size}, e=${this.edges.size}, f=${this.faces.size}`
       );
     }
+    
+    // Set all face pointers and get list of axial facets.
+    const axialNonPseudohingeFacets: Set<Face> = new Set();
+    for (const face of this.faces) {
+      if (face != theOuterFace) {
+        if (this.annotateFaceData(face) && !face.hasPseudohinge) {
+          axialNonPseudohingeFacets.add(face);
+        }
+      }
+    }
+    
+    // Build corridors from each axial facet and set flaps as union.
+    for (let numIterations1 = 0; numIterations1 < 500; numIterations1++) {
+      if (axialNonPseudohingeFacets.size == 0) {
+        return;
+      } else {
+        let face = getAnyElement(axialNonPseudohingeFacets);
+        axialNonPseudohingeFacets.delete(face);
+        let corridorHasNotTerminated = true;
+        const corridor = face.corridor as Face[];
+        const flap: Set<string> = new Set(face.flap);
+        for (let numIterations2 = 0; numIterations2 < 100; numIterations2++) {
+          const nextFace = numIterations2 % 2 == 0 ? face.crossRidge : face.crossGussetOrPseudohinge;
+          if (nextFace == null) { // Done building corridor.
+            const didDeleteEndpoint = axialNonPseudohingeFacets.delete(face);
+            if (!didDeleteEndpoint) {
+              console.log(corridor);
+              throw new Error(`Corridor ${corridor.map(f => "[" + f.nodes.map(n => n.id) + "]")} ended somewhere that wasn't in list of axial facets.`);
+            }
+            face.corridor = Array.from(corridor).reverse();
+            
+            // Reset flaps with all ids encountered in corridor.
+            if (flap.size != 2) {
+              console.log(face);
+              throw new Error(`Could not determine flap: ${Array.from(flap)}.`);
+            }
+            for (const faceOfCorridor of corridor) {
+              faceOfCorridor.flap = flap;
+            }
+            corridorHasNotTerminated = false;
+            break;
+          } else {
+            corridor.push(nextFace);
+            for (const nodeId of nextFace.flap) {
+              flap.add(nodeId);
+            }
+            face = nextFace;
+          }
+        }
+        if (corridorHasNotTerminated) {
+          throw new Error("Caught in infinite loop while building corridors (2).");
+        }
+      }
+    }
+    throw new Error("Caught in infinite loop while building corridors (1).");
   }
 }
 
@@ -526,6 +679,7 @@ export {
   IS_RIGHT_TURN_CUTOFF_2,
   IS_RIGHT_TURN_CUTOFF_3,
   IS_RIGHT_TURN_CUTOFF_4,
+  getAnyElement,
   getIdString,
   Node,
   Edge,
