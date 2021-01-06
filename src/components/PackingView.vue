@@ -169,12 +169,18 @@ export default class PackingView extends Vue {
         creasesGraph.nodes.forEach(function(v, idx) {
           const center = packingBoard.create("point", [v.x, v.y], {
             name: v.id,
+            label: {offset: [6, 6], highlight: false},
+            highlight: false,
             fixed: true
           });
           const radius =
             (leafLengths.get(v.id) + creasesGraph.leafExtensions.get(v)) *
             packing.scaleFactor;
-          packingBoard.create("circle", [center, radius], { fixed: true });
+          packingBoard.create("circle", [center, radius], {
+            fixed: true,
+            strokeColor: "#0021e6",
+            highlight: false
+          });
         });
         this.packingBoard = packingBoard;
       }

@@ -6,31 +6,24 @@ import {
   CreasesGraph,
   CreasesNode,
   Crease,
+  CreaseType,
   MVAssignment,
   Face
 } from "../packing";
 
-function edgeAssignmentShort(mv: MVAssignment): string {
-  switch (mv) {
+function edgeAssignmentShort(e: Crease, fanOutHinges: boolean): string {
+  if (fanOutHinges && e.creaseType == CreaseType.Hinge) {
+    return "B"; // Setting fanOutHinges true makes all hinges unassigned.
+  }
+  switch (e.assignment) {
     case MVAssignment.Mountain:
       return "M";
     case MVAssignment.Valley:
       return "V";
-    case MVAssignment.Tristate:
-      // TODO (@pjrule): for now, we let tristate folds be boundary
-      // folds---this makes the four-star example work.
-      // Once facet ordering is fully implemented, this case should no
-      // longer occur by the time we reach the export step.
-      return "B";
-    case MVAssignment.Unknown:
-      // TODO (@pjrule): it was not exporting axial creases so I added
-      // this, following your pattern for Tristate folds, and it worked.
-      // I think this just draws the lines; the folds are there either way.
-      return "B";
-    case MVAssignment.Boundary:
-      return "B";
+    case MVAssignment.Unfolded:
+      return "F";
   }
-  return "U"; // unknown, etc.
+  return "B";
 }
 
 export function generateFold(graph: CreasesGraph) {
@@ -57,7 +50,7 @@ export function generateFold(graph: CreasesGraph) {
     vertexEdges[toIdx].push(idx);
     vertexEdges[fromIdx].push(idx);
     edges.push([toIdx, fromIdx]);
-    const assn = edgeAssignmentShort(edge.assignment);
+    const assn = edgeAssignmentShort(edge, true); // TODO Make second argument a user choice.
     assignments.push(assn);
     // Origami Simulator does not automatically infer fold angles upon a POST request,
     // so we generate them manually. See https://github.com/amandaghassaei/

@@ -13,7 +13,7 @@ import {
   Graph,
   TreeGraph,
   CreasesGraphState,
-  CreasesGraph
+  CreasesGraph,
 } from "../../src/engine/packing";
 
 export function fiveStarTree() {
@@ -138,6 +138,19 @@ export function rabbitEarOnSidePacking() {
     [1, 1 / 2],
     [5 / 8, 0],
     [5 / 8, 1]
+  ]);
+}
+
+export function twoMoleculeTree() {
+  return starTree([1, 4, 1, 4]);
+}
+
+export function twoMoleculePacking() {
+  return starPacking(1 / 8, [
+    [3 / 4, 1 / 2],
+    [3 / 8, 1],
+    [0, 1 / 2],
+    [3 / 8, 0]
   ]);
 }
 
@@ -331,3 +344,87 @@ export function crabTree() {
   }
   return tree;
 }
+
+export function crossingSwordsTree() {
+  const v1 = new TreeNode("1", 0, 0);
+  const v2 = new TreeNode("2", -3, -3);
+  const v3 = new TreeNode("3", 3, -3);
+  const v4 = new TreeNode("4", -1, 1);
+  const v5 = new TreeNode("5", 1, 1);
+  const v6 = new TreeNode("6", -4, -2);
+  const v7 = new TreeNode("7", -4, -4);
+  const v8 = new TreeNode("8", -2, -4);
+  const v9 = new TreeNode("9", 4, -2);
+  const v10 = new TreeNode("10", 4, -4);
+  const v11 = new TreeNode("11", 2, -4);
+  const v12 = new TreeNode("12", -5, -3);
+  const tree = new TreeGraph();
+  tree.addNode(v1);
+  tree.addNode(v2);
+  tree.addNode(v3);
+  tree.addNode(v4);
+  tree.addNode(v5);
+  tree.addNode(v6);
+  tree.addNode(v7);
+  tree.addNode(v8);
+  tree.addNode(v9);
+  tree.addNode(v10);
+  tree.addNode(v11);
+  tree.addNode(v12);
+  tree.addEdge(new TreeEdge(v2, v1, 3));
+  tree.addEdge(new TreeEdge(v3, v1, 3));
+  tree.addEdge(new TreeEdge(v4, v1, 1));
+  tree.addEdge(new TreeEdge(v5, v1, 1));
+  tree.addEdge(new TreeEdge(v6, v2, 1));
+  tree.addEdge(new TreeEdge(v7, v2, 1));
+  tree.addEdge(new TreeEdge(v8, v2, 1));
+  tree.addEdge(new TreeEdge(v9, v3, 1));
+  tree.addEdge(new TreeEdge(v10, v3, 1));
+  tree.addEdge(new TreeEdge(v11, v3, 1));
+  tree.addEdge(new TreeEdge(v12, v2, 3));
+  return tree;
+}
+
+export function crossingSwordsPacking() {
+  const packing = new Packing();
+  packing.scaleFactor = 1 / 12;
+  packing.nodes.set("4",  new PackingNode("4",   8 / 12,  9 / 12));
+  packing.nodes.set("5",  new PackingNode("5",   8 / 12,  3 / 12));
+  packing.nodes.set("6",  new PackingNode("6",   4 / 12, 12 / 12));
+  packing.nodes.set("7",  new PackingNode("7",   4 / 12,  6 / 12));
+  packing.nodes.set("8",  new PackingNode("8",   4 / 12,  0 / 12));
+  packing.nodes.set("9",  new PackingNode("9",  12 / 12, 12 / 12));
+  packing.nodes.set("10", new PackingNode("10", 12 / 12,  6 / 12));
+  packing.nodes.set("11", new PackingNode("11", 12 / 12,  0 / 12));
+  packing.nodes.set("12", new PackingNode("12",  0 / 12,  6 / 12));
+  return packing;
+}
+
+export function pseudohingeElevationBugTree() {
+  const v1 = new TreeNode("1", -1, 1);
+  const v2 = new TreeNode("2", 0, 0);
+  const v3 = new TreeNode("3", -2, 2);
+  const v4 = new TreeNode("4", -1, -1);
+  const v5 = new TreeNode("5", 1, 1);
+  const tree = new TreeGraph();
+  tree.addNode(v1);
+  tree.addNode(v2);
+  tree.addNode(v3);
+  tree.addNode(v4);
+  tree.addNode(v5);
+  tree.addEdge(new TreeEdge(v2, v1, 0.6));
+  tree.addEdge(new TreeEdge(v3, v1, 0.25));
+  tree.addEdge(new TreeEdge(v4, v2, 0.15));
+  tree.addEdge(new TreeEdge(v5, v2, 0.15));
+  return tree;
+}
+
+export function pseudohingeElevationBugPacking() {
+  const packing = new Packing();
+  packing.scaleFactor = 1;
+  packing.nodes.set("3", new PackingNode("3", 0, 1));
+  packing.nodes.set("4", new PackingNode("4", 0, 0));
+  packing.nodes.set("5", new PackingNode("5", 1, 1));
+  return packing;
+}
+

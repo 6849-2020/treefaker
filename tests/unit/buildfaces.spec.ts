@@ -173,7 +173,7 @@ describe("buildFaces", function() {
 
     const v1 = new CreasesNode("x", "x", 0.25, 0.25, 0);
     const v2 = new CreasesNode("y", "y", 0.75, 0.75, 0);
-    const e = new Crease(v2, v1, CreaseType.Gusset);
+    const e = new Crease(v2, v1, CreaseType.Gusset, null);
     g.addNode(v1);
     g.addNode(v2);
     g.addEdge(e);

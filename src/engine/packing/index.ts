@@ -116,7 +116,7 @@ class CreasesNode extends PackingNode {
   faces: Face[];
   onBoundaryOfSquare: boolean;
   goUpRidge: CreasesNode | null;
-  readonly elevation: number;Z
+  readonly elevation: number;
 
   constructor(id: string, displayId: string, x: number, y: number, elevation: number) {
     super(id, x, y);
@@ -142,12 +142,13 @@ enum CreaseType {
 enum MVAssignment {
   Mountain,
   Valley,
-  Tristate,
+  Unfolded,
   Unknown,
   Boundary
 }
 
 class Crease extends Edge {
+  readonly baseFace: Face | null; // The active polygon which this crease is inside of.
   leftFace: Face | null;
   rightFace: Face | null;
   creaseType: CreaseType;
@@ -168,8 +169,6 @@ class Crease extends Edge {
       this.assignment = MVAssignment.Valley;
     } else if (creaseType == CreaseType.Ridge) {
       this.assignment = MVAssignment.Mountain;
-    } else if (creaseType == CreaseType.Hinge) {
-      this.assignment = MVAssignment.Tristate;
     } else {
       this.assignment = MVAssignment.Unknown;
     }
@@ -189,8 +188,9 @@ class Crease extends Edge {
     return (this.from as CreasesNode).elevation + (this.to as CreasesNode).elevation;
   }
 
-  constructor(to: CreasesNode, from: CreasesNode, creaseType: CreaseType) {
+  constructor(to: CreasesNode, from: CreasesNode, creaseType: CreaseType, baseFace: Face | null) {
     super(to, from);
+    this.baseFace = baseFace;
     this.leftFace = null;
     this.rightFace = null;
 
@@ -208,11 +208,36 @@ class Face {
   inactiveHullCrease: Crease | null;
   crossRidge: Face | null; // The face on the other side of the highest elevation ridge.
   crossGussetOrPseudohinge: Face | null; // May be null if on boundary of active polyton, indicating end of corridor. 
-  crossHinge: Face | null; // Will be uniquely determined if hasPseudohinge is true.
+  crossAxialOrHull: Face | null; // Will be non-null if and only if the face is an axial facet.
   hasPseudohinge: boolean;
+  extendedHasPseudohinge: boolean; // Whether there is a path crossing only unfolded creases to a pseudohinge facet.
   flap: Set<string>; // Set of 2 tree node ids the face projects down to.
-  corridor : Face[] | null; // Will be non-null if and only if the face is an axial facet.
+  corridor: Face[] | null; // Will be non-null if and only if the face is an axial facet.
+  creaseToNextAxialFacet: Crease | null;
+  creaseToPreviousAxialFacet: Crease | null;
+  facetOrderIndex: number;
+  isColored: boolean;
+  coloring: boolean;
+  baseFaceLocalRoot: Face | string; // A pointer to the face representing the original active polygon or the local root id.
+  //isAMoleculeSource: boolean; // Whether the face is to the right of a local root hinge.
+  moleculeSource : Face | null; // The axial facet from which the MOG starts.
   [key: string]: any;
+  
+  averageX(): number {
+    let total = 0;
+    for (const n of this.nodes) {
+      total += n.x;
+    }
+    return total/this.nodes.length;
+  }
+  
+  averageY(): number {
+    let total = 0;
+    for (const n of this.nodes) {
+      total += n.y;
+    }
+    return total/this.nodes.length;
+  }
 
   constructor() {
     this.isOuterFace = false;
@@ -220,10 +245,85 @@ class Face {
     this.inactiveHullCrease = null;
     this.crossRidge = null;
     this.crossGussetOrPseudohinge = null;
-    this.crossHinge = null;
+    this.crossAxialOrHull = null;
     this.hasPseudohinge = false;
+    this.extendedHasPseudohinge = false;
     this.flap = new Set();
     this.corridor = null;
+    this.creaseToNextAxialFacet = null;
+    this.creaseToPreviousAxialFacet = null;
+    this.facetOrderIndex = -1;
+    this.isColored = false;
+    this.coloring = false;
+    this.baseFaceLocalRoot = "unset";
+    //this.isAMoleculeSource = false;
+    this.moleculeSource = null;
+  }
+}
+
+class FacetOrderingGraph {
+  readonly faces: Set<Face>;
+  readonly adj: Map<Face, Face[]>;
+
+  constructor() {
+    this.faces = new Set();
+    this.adj = new Map();
+  }
+
+  addFace(face: Face) {
+    if (!this.faces.has(face)) {
+      this.faces.add(face);
+      this.adj.set(face, []);
+    }
+  }
+
+  addEdge(face1: Face, face2: Face) {
+    if (!this.faces.has(face1)) {
+      throw new Error(`First face ${face1.nodes.map(n => n.id)} not in FacetOrderingGraph.`);
+    }
+    if (!this.faces.has(face2)) {
+      throw new Error(`Second face ${face2.nodes.map(n => n.id)} not in FacetOrderingGraph.`);
+    }
+    const adjList = this.adj.get(face1) as Face[];
+    adjList.push(face2);
+  }
+  
+  // Using topological sort algorithm cut-and-pasted from:
+  // https://www.tutorialspoint.com/Topological-sorting-using-Javascript-DFS
+  topologicalSortHelper(face: Face, explored: Set<Face>, justExplored: Set<Face>, s: Face[]) {
+    explored.add(face);
+    if (justExplored.has(face)) {
+      console.log(justExplored);
+      throw new Error(`Facet ordering graph is not a DAG: cycle involving face ${face.nodes.map(n => n.id)}.`);
+    } else {
+      justExplored.add(face);
+    }
+    // Marks this node as visited and goes on to the nodes
+    // that are dependent on this node, the edge is node ----> n
+    const adjList = this.adj.get(face) as Face[];
+    adjList.forEach(f => {
+      if (!explored.has(f)) {
+        this.topologicalSortHelper(f, explored, justExplored, s);
+      }
+    });
+    // All dependencies are resolved for this node, we can now add
+    // This to the stack.
+    s.push(face);
+  }
+
+  topologicalSort(): Face[] {
+    // Create a Stack to keep track of all elements in sorted order
+    const s: Face[] = [];
+    const explored: Set<Face> = new Set();
+
+    // For every unvisited node in our graph, call the helper.
+    this.faces.forEach(face => {
+      if (!explored.has(face)) {
+        this.topologicalSortHelper(face, explored, new Set(), s);
+      }
+    });
+
+    return s.reverse();
   }
 }
 
@@ -374,6 +474,38 @@ class TreeGraph extends Graph<TreeNode, TreeEdge> {
       }
     }
   }
+  
+  // Compute discrete depths using highest y-coordinate internal node as global root.
+  dangle(rootId: string) {
+    let root: TreeNode | null = null;
+    if (rootId == "unset") {
+      for (const n of this.nodes.values()) {
+        if (n.edges.length >= 2 && (root == null || root.y < n.y)) {
+          root = n;
+        }
+      }
+    } else {
+      root = this.nodes.get(rootId) as TreeNode;
+    }
+    if (root == null) {
+      throw new Error("Tree has no non-leaf nodes.")
+    } else {
+      const discreteDepth: Map<string, number> = new Map();
+      discreteDepth.set("unset", 1000);
+      this.dangleRecursive(discreteDepth, root, 0);
+      return discreteDepth;
+    }
+  }
+  
+  dangleRecursive(discreteDepth: Map<string, number>, n: TreeNode, depth: number) {
+    if (!discreteDepth.has(n.id)) {
+      discreteDepth.set(n.id, depth);
+      for (const incidentEdge of n.edges) {
+        const nextNode = incidentEdge.getOtherNode(n);
+        this.dangleRecursive(discreteDepth, nextNode, depth + 1);
+      }
+    }
+  }
 }
 
 // The creases graph is modified in-place by several functions; these states are used to enforce that you don't try to make these calls in the wrong order.
@@ -429,15 +561,16 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
     const indexOfToNodeInLeftFace = leftFace.nodes.indexOf(toNode);
     const indexOfFromNodeInRightFace = rightFace.nodes.indexOf(fromNode);
     const creaseType = e.creaseType;
+    const baseFace = e.baseFace;
 
     this.removeEdge(e);
     const newNode = new CreasesNode(this.nextInternalId(), displayId, x, y, elevation);
     this.addNode(newNode);
-    const firstCrease = new Crease(newNode, fromNode, creaseType);
+    const firstCrease = new Crease(newNode, fromNode, creaseType, baseFace);
     this.addEdge(firstCrease);
     firstCrease.leftFace = leftFace;
     firstCrease.rightFace = rightFace;
-    const secondCrease = new Crease(toNode, newNode, creaseType);
+    const secondCrease = new Crease(toNode, newNode, creaseType, baseFace);
     this.addEdge(secondCrease);
     secondCrease.leftFace = leftFace;
     secondCrease.rightFace = rightFace;
@@ -464,30 +597,31 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
       );
     }
     if (v2.edges.length == 2) {
-      const e2 = v2.edges[0] as Crease;
+      const e1 = v2.edges[0] as Crease;
       const e3 = v2.edges[1] as Crease;
-      const v1 = e2.getOtherNode(v2) as CreasesNode;
+      const v1 = e1.getOtherNode(v2) as CreasesNode;
       const v3 = e3.getOtherNode(v2) as CreasesNode;
       const v2Angle = Math.atan2(v2.y - v1.y, v2.x - v1.x);
       const v3Angle = Math.atan2(v3.y - v1.y, v3.x - v1.x);
-      const creaseType = e2.creaseType;
+      const creaseType = e1.creaseType;
+      const baseFace = e1.baseFace;
       if (Math.abs(v2Angle - v3Angle) < TOLERANCE) {
         if (
           creaseType != e3.creaseType ||
           (creaseType != CreaseType.Ridge && creaseType != CreaseType.Hinge)
         ) {
           throw new Error(
-            `Invalid crease types: edge ${e2.idString()} is of type ${
-              e2.creaseType
+            `Invalid crease types: edge ${e1.idString()} is of type ${
+              e1.creaseType
             } and edge ${e3.idString()} is of type ${e3.creaseType}.`
           );
         }
-        newCreases.delete(e2);
+        newCreases.delete(e1);
         newCreases.delete(e3);
-        this.removeEdge(e2);
+        this.removeEdge(e1);
         this.removeEdge(e3);
         this.nodes.delete(v2.id);
-        const newCrease = new Crease(v3, v1, creaseType);
+        const newCrease = v1.elevation < v3.elevation ? new Crease(v3, v1, creaseType, baseFace) : new Crease(v1, v3, creaseType, baseFace);
         newCreases.add(newCrease);
         this.addEdge(newCrease);
         return true;
@@ -505,6 +639,7 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
     }
     const face = new Face();
     this.faces.add(face);
+    face.baseFaceLocalRoot = eStart.baseFace as Face;
     let v = vStart;
     let e = eStart;
     for (let numIterations = 0; numIterations < 100; numIterations++) {
@@ -514,7 +649,10 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
       } else {
         e.rightFace = face;
       }
-      if (e.creaseType == CreaseType.InactiveHull) {
+      const foundBoundaryOfPolygon = e.creaseType == CreaseType.Axial || e.creaseType == CreaseType.ActiveHull || e.creaseType == CreaseType.InactiveHull;
+      if (e.creaseType == CreaseType.Pseudohinge) {
+        face.hasPseudohinge = true;
+      } else if (e.creaseType == CreaseType.InactiveHull) {
         if (!face.isOuterFace) {
           if (face.inactiveHullEdge == null) {
             face.inactiveHullEdge = e;
@@ -529,6 +667,9 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
       }
       v = e.getOtherNode(v) as CreasesNode;
       e = v.clockwise(e) as Crease;
+      if (foundBoundaryOfPolygon) {
+        face.creaseToNextAxialFacet = e;
+      }
       if (v == vStart && e == eStart) {
         return face;
       }
@@ -538,14 +679,13 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
     );
   }
   
-  // Sets crossRidge, crossGussetOrPseudohinge, crossHinge, hasPseudohinge, and flap fields, returning set of axial facets.
+  // Sets crossRidge, crossGussetOrPseudohinge, crossHinge, and flap fields, returning set of axial facets.
   annotateFaceData(face: Face) {
     if (this.state != CreasesGraphState.PostUMA) {
       throw new Error(
         `Do not call annotateFaceData from state ${CreasesGraphState[this.state]}.`
       );
     }
-    let isAxialFacet = false;
     let highestSumElevations = 0;
     let v1 = face.nodes[face.nodes.length - 1];
     for (const v2 of face.nodes) {
@@ -555,9 +695,13 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
       const e = this.getEdge(v1, v2) as Crease;
       if (e.creaseType == CreaseType.Ridge) {
         const newSumElevations = e.sumElevations();
-        if (newSumElevations > highestSumElevations) {
+        const otherFace = e.getOtherFace(face) as Face;
+        if (otherFace.hasPseudohinge) { // Ensure otherFace is crossRidge face.
+          highestSumElevations = 2;
+          face.crossRidge = otherFace;
+        } else if (newSumElevations > highestSumElevations) {
           highestSumElevations = newSumElevations;
-          face.crossRidge = e.getOtherFace(face);
+          face.crossRidge = otherFace;
         }
       } else if (
         e.creaseType == CreaseType.Gusset ||
@@ -566,25 +710,23 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
         if (face.crossGussetOrPseudohinge == null) {
           face.crossGussetOrPseudohinge = e.getOtherFace(face);
         } else {
-          throw new Error(`Found two gusset/pseudohinge creases on one face, second is ${e.idString()}.`);
-        }
-        if (e.creaseType == CreaseType.Pseudohinge) {
-          face.hasPseudohinge = true;
+          console.log(e);
+          throw new Error(`Found two gusset/pseudohinge creases on one face, second is ${e.idString()}, which has type ${CreaseType[e.creaseType]}.`);
         }
       } else if (e.creaseType == CreaseType.Hinge) {
-        face.crossHinge = e.getOtherFace(face);
+        //face.crossHinge = e.getOtherFace(face);
       } else {
-        if (isAxialFacet) {
+        if (face.crossAxialOrHull == null) {
+          face.crossAxialOrHull = e.getOtherFace(face);
+          face.corridor = [face];
+        } else {
           console.log(e);
           throw new Error(`Found two axial/hull creases on one face, second is ${e.idString()}, which has type ${CreaseType[e.creaseType]}.`);
-        } else {
-          face.corridor = [face];
-          isAxialFacet = true;
         }
       }
       v1 = v2;
     }
-    return isAxialFacet;
+    return face.crossAxialOrHull != null;
   }
 
   // Makes new faces to either side of every crease in newCreases, leaving theOuterFace untouched, then annotates faces with data necessary for facet ordering.
@@ -669,6 +811,33 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
     }
     throw new Error("Caught in infinite loop while building corridors (1).");
   }
+  
+  findAGoodRoot(d: Map<string, Map<string, Array<[string, number]>>>): string {
+    const occurrences: Map<string, number> = new Map();
+    for (const axialCrease of this.edges.values()) {
+      if (axialCrease.creaseType == CreaseType.Axial) {
+        const internalNodes = Array.from((d.get(axialCrease.from.id) as Map<string, Array<[string, number]>>).get(axialCrease.to.id) as Array<[string, number]>);
+        internalNodes.pop();
+        for (const [nodeId, distance] of internalNodes) {
+          if (occurrences.has(nodeId)) {
+            occurrences.set(nodeId, (occurrences.get(nodeId) as number) + 1);
+          } else {
+            occurrences.set(nodeId, 1);
+          }
+        }
+      }
+    }
+    
+    let rootId = "unset";
+    let maxNumOccurrences = 0;
+    for (const [nodeId, numOccurrences] of occurrences) {
+      if (numOccurrences > maxNumOccurrences) {
+        maxNumOccurrences = numOccurrences;
+        rootId = nodeId;
+      }
+    }
+    return rootId;
+  }
 }
 
 export {
@@ -692,6 +861,7 @@ export {
   CreaseType,
   MVAssignment,
   Crease,
+  FacetOrderingGraph,
   Graph,
   TreeGraph,
   CreasesGraphState,

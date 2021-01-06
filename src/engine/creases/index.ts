@@ -159,7 +159,7 @@ export function cleanPacking(
         v1.id < v2.id &&
         isActive(v1, v2, p.scaleFactor, d, g.leafExtensions, TOLERANCE)
       ) {
-        const axialCrease = new Crease(v2, v1, CreaseType.Axial);
+        const axialCrease = new Crease(v2, v1, CreaseType.Axial, null);
         g.addEdge(axialCrease);
       }
     }
@@ -193,7 +193,7 @@ export function cleanPacking(
         u != v &&
         isActive(v, u, p.scaleFactor, d, g.leafExtensions, UPDATE_TOLERANCE)
       ) {
-        const axialCrease = new Crease(v, u, CreaseType.Axial);
+        const axialCrease = new Crease(v, u, CreaseType.Axial, null);
         g.addEdge(axialCrease);
       }
     }
@@ -505,7 +505,7 @@ export function buildFaces(g: CreasesGraph): null | string {
     const v2 = convexHull[(i + 1) % convexHull.length] as CreasesNode;
     const e = g.getEdge(v1, v2);
     if (e == undefined) {
-      g.addEdge(new Crease(v2, v1, CreaseType.InactiveHull));
+      g.addEdge(new Crease(v2, v1, CreaseType.InactiveHull, null));
     } else {
       e.updateCreaseType(CreaseType.ActiveHull);
     }
@@ -664,6 +664,7 @@ export function isTwisted(
 
 export function buildMoleculeRecursive(
   g: CreasesGraph,
+  baseFace: Face,
   boundary: CreasesNode[],
   z: Map<
     CreasesNode,
@@ -878,7 +879,7 @@ export function buildMoleculeRecursive(
       g.addNode(insetNode);
     }
     boundaryNode.goUpRidge = insetNode;
-    const newCrease = new Crease(insetNode, boundaryNode, CreaseType.Ridge);
+    const newCrease = new Crease(insetNode, boundaryNode, CreaseType.Ridge, baseFace);
     otherRidgeNodes.set(newCrease, []);
     newCreases.add(newCrease);
     g.addEdge(newCrease);
@@ -989,7 +990,8 @@ export function buildMoleculeRecursive(
             const newCrease = new Crease(
               hingeNodeOnJRidge,
               internalNode,
-              CreaseType.Hinge
+              CreaseType.Hinge,
+              baseFace
             );
             newCreases.add(newCrease);
             g.addEdge(newCrease);
@@ -1001,7 +1003,8 @@ export function buildMoleculeRecursive(
             const newCrease = new Crease(
               insetNodeJ,
               internalNode,
-              CreaseType.Hinge
+              CreaseType.Hinge,
+              baseFace
             );
             newCreases.add(newCrease);
             g.addEdge(newCrease);
@@ -1028,7 +1031,8 @@ export function buildMoleculeRecursive(
                 const newCrease = new Crease(
                   hingeNodeOnInsetBoundary,
                   lastNode,
-                  CreaseType.Ridge
+                  CreaseType.Ridge,
+                  baseFace
                 );
                 newCreases.add(newCrease);
                 g.addEdge(newCrease);
@@ -1040,7 +1044,8 @@ export function buildMoleculeRecursive(
             const newCrease = new Crease(
               hingeNodeOnInsetBoundary,
               internalNode,
-              CreaseType.Hinge
+              CreaseType.Hinge,
+              baseFace
             );
             newCreases.add(newCrease);
             g.addEdge(newCrease);
@@ -1058,7 +1063,8 @@ export function buildMoleculeRecursive(
             const newCrease = new Crease(
               insetNodeI,
               internalNode,
-              CreaseType.Hinge
+              CreaseType.Hinge,
+              baseFace
             );
             newCreases.add(newCrease);
             g.addEdge(newCrease);
@@ -1091,7 +1097,8 @@ export function buildMoleculeRecursive(
             const newCrease = new Crease(
               hingeNodeOnIRidge,
               internalNode,
-              CreaseType.Hinge
+              CreaseType.Hinge,
+              baseFace
             );
             newCreases.add(newCrease);
             g.addEdge(newCrease);
@@ -1114,7 +1121,8 @@ export function buildMoleculeRecursive(
     const newCrease = new Crease(
       finalRidgeCreaseNode2 as CreasesNode,
       finalRidgeCreaseNode1 as CreasesNode,
-      CreaseType.Ridge
+      CreaseType.Ridge,
+      baseFace
     );
     newCreases.add(newCrease);
     g.addEdge(newCrease);
@@ -1133,7 +1141,7 @@ export function buildMoleculeRecursive(
       for (const nextNode of nodesAlongRidge
         .map(x => x[1] as CreasesNode)
         .concat(ridgeCrease.to as CreasesNode)) {
-        const newCrease = new Crease(lastNode, nextNode, CreaseType.Ridge);
+        const newCrease = new Crease(lastNode, nextNode, CreaseType.Ridge, baseFace);
         newCreases.add(newCrease);
         g.addEdge(newCrease);
         lastNode = nextNode;
@@ -1229,7 +1237,8 @@ export function buildMoleculeRecursive(
                 const newCrease = new Crease(
                   lastNode,
                   nextNode,
-                  CreaseType.Gusset
+                  CreaseType.Gusset,
+                  baseFace
                 );
                 newCreases.add(newCrease);
                 g.addEdge(newCrease);
@@ -1238,7 +1247,8 @@ export function buildMoleculeRecursive(
               const newCrease = new Crease(
                 activePathEndNode,
                 lastNode,
-                CreaseType.Gusset
+                CreaseType.Gusset,
+                baseFace
               );
               newCreases.add(newCrease);
               g.addEdge(newCrease);
@@ -1252,7 +1262,7 @@ export function buildMoleculeRecursive(
           activePathStartIndex = activePathEndIndex;
         }
         //console.log(`Making recursive call on ${newBoundary.map(n => n.id)}.`);
-        buildMoleculeRecursive(g, newBoundary, z, newCreases, newElevation);
+        buildMoleculeRecursive(g, baseFace, newBoundary, z, newCreases, newElevation);
       }
     }
     throw new Error(
@@ -1265,7 +1275,8 @@ export function buildMoleculeRecursive(
 export function subdivideCreasesInitial(
   g: CreasesGraph,
   d: Map<string, Map<string, Array<[string, number]>>>,
-  scaleFactor: number
+  scaleFactor: number,
+  discreteDepth: Map<string, number>
 ): [
   Map<
     CreasesNode,
@@ -1311,6 +1322,23 @@ export function subdivideCreasesInitial(
             distanceToInternalNodeWithoutLeafExtension +
             (g.leafExtensions.get(nodeI) as number);
           if (crease != undefined) {
+            // See if we need to update the local root.
+            const newDepth = discreteDepth.get(internalNodeId);
+            if (newDepth == undefined) {
+              console.log(discreteDepth);
+              throw new Error(`Undefined (${newDepth}) new discrete depth for local root '${internalNodeId}'.`);
+            }
+            for (const baseFace of ([crease.leftFace, crease.rightFace] as Face[])) {
+              const oldDepth = discreteDepth.get(baseFace.baseFaceLocalRoot as string);
+              if (oldDepth == undefined) {
+                console.log(discreteDepth);
+                throw new Error(`Undefined prior discrete depth for local root '${baseFace.baseFaceLocalRoot}'.`);
+              }
+              if (newDepth < oldDepth) {
+                baseFace.baseFaceLocalRoot = internalNodeId;
+              }
+            }
+            
             const fractionOver = distanceToInternalNode / totalDistance;
             const creaseFrom = crease.from;
             const creaseTo = crease.to;
@@ -1358,7 +1386,8 @@ export function subdivideCreasesInitial(
 export function generateMolecules(
   g: CreasesGraph,
   d: Map<string, Map<string, Array<[string, number]>>>,
-  scaleFactor: number
+  scaleFactor: number,
+  discreteDepth: Map<string, number>
 ) {
   if (g.state != CreasesGraphState.PreUMA) {
     throw new Error(
@@ -1369,24 +1398,24 @@ export function generateMolecules(
   }
 
   // Record the active polygons before more nodes get added in subdivision.
-  const boundaries: Array<Array<CreasesNode>> = [];
+  const boundaries: Array<[Face, Array<CreasesNode>]> = [];
   let outerFace: Face | null = null;
   for (const face of Array.from(g.faces)) {
     if (face.isOuterFace) {
       outerFace = face;
     } else {
-      boundaries.push(Array.from(face.nodes));
+      boundaries.push([face, Array.from(face.nodes)]);
     }
   }
   if (outerFace == null) {
-    throw new Error("Did not find outer face");
+    throw new Error("Could not find outer face.");
   }
 
   // Build molecules recursively.
-  const [z, inactiveHullCreases] = subdivideCreasesInitial(g, d, scaleFactor);
+  const [z, inactiveHullCreases] = subdivideCreasesInitial(g, d, scaleFactor, discreteDepth);
   const newCreases: Set<Crease> = new Set();
-  for (const boundary of boundaries) {
-    buildMoleculeRecursive(g, boundary, z, newCreases, 0);
+  for (const [baseFace, boundary] of boundaries) {
+    buildMoleculeRecursive(g, baseFace, boundary, z, newCreases, 0);
   }
 
   // Get rid of degree 2 ridge/hinge vertices.
@@ -1433,6 +1462,7 @@ export function generateMolecules(
       );
     }
     let baseCrease = inactiveHullCrease;
+    const baseFace = baseCrease.getOtherFace(outerFace);
     dy /= mag;
     for (const n of ridgeline) {
       if (n.edges.length % 2 == 1) {
@@ -1450,7 +1480,7 @@ export function generateMolecules(
 
         const newNode = g.subdivideCrease(baseCrease, x, y, n.displayId, 0);
         baseCrease = g.getEdge(endNode, newNode) as Crease;
-        const newCrease = new Crease(n, newNode, creaseType);
+        const newCrease = new Crease(n, newNode, creaseType, baseFace);
         g.addEdge(newCrease);
       }
     }
@@ -1461,23 +1491,6 @@ export function generateMolecules(
   g.rebuildFaces(outerFace, newCreases);
 
   g.state = CreasesGraphState.PreFacetOrdering;
+  return discreteDepth;
 }
-
-export function orderFacets(g: CreasesGraph) {
-  if (g.state != CreasesGraphState.PreFacetOrdering) {
-    throw new Error(
-      `Should not be calling orderFacets from state ${
-        CreasesGraphState[g.state]
-      }.`
-    );
-  }
-  
-  // TODO
-  
-  g.state = CreasesGraphState.FullyAssigned;
-}
-
-
-
-
 
