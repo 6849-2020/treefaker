@@ -12,9 +12,10 @@ describe("generateFold", function() {
     const tree = fiveStarTree();
     const p = fiveStarPacking();
     const d = tree.getDistances();
+    const discreteDepth = tree.dangle("1");
     const g = cleanPacking(p, d);
     buildFaces(g);
-    generateMolecules(g, d, p.scaleFactor);
+    generateMolecules(g, d, p.scaleFactor, discreteDepth);
     const fold = generateFold(g);
 
     // Metadata should be constant.
