@@ -300,17 +300,21 @@ export default class TreeView extends Vue {
     const newLine = this.treeBoard.create("segment", [point1, point2], {
       fixed: true
     });
-    const newLineEdgeLengthLabel = this.treeBoard.create("text", [
-      function(x: any) {
-        return (point1.X() + point2.X()) / 2;
-      },
-      function(x: any) {
-        return (point1.Y() + point2.Y()) / 2;
-      },
-      function() {
-        return point1.Dist(point2).toFixed(2);
-      }
-    ], {highlight: false});
+    const newLineEdgeLengthLabel = this.treeBoard.create(
+      "text",
+      [
+        function(x: any) {
+          return (point1.X() + point2.X()) / 2;
+        },
+        function(x: any) {
+          return (point1.Y() + point2.Y()) / 2;
+        },
+        function() {
+          return point1.Dist(point2).toFixed(2);
+        }
+      ],
+      { highlight: false }
+    );
     this.treePoints.get(point1).add(newLine);
     this.treePoints.get(point2).add(newLine);
     this.edgeLengthLabelOf.set(newLine, newLineEdgeLengthLabel);
@@ -369,7 +373,7 @@ export default class TreeView extends Vue {
     const name = forceName || this.nextPointId;
     const point = this.treeBoard.create("point", [x, y], {
       name: name,
-        label: {offset: [6, 6], highlight: false}
+      label: { offset: [6, 6], highlight: false }
     });
     point.on(
       "up",

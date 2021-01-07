@@ -131,7 +131,7 @@ describe("generateMolecules", function() {
     expect(g.nodes.size).to.equal(11);
     expect(g.edges.size).to.equal(22);
     expect(g.faces.size).to.equal(13);
-    
+
     const numCreasesOfType = [0, 0, 0, 0, 0, 0, 0];
     for (const crease of g.edges.values()) {
       numCreasesOfType[crease.creaseType]++;

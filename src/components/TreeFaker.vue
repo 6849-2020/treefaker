@@ -33,8 +33,6 @@
 
 
     <div class="container">
-      <b-alert :show=inErrorState variant="danger"><p>{{ errorMessage }}</p></b-alert>
-
       <table class="views">
         <tr class="threeViews">
           <td class="viewBoxTd"><TreeView ref="tree" /></td>
@@ -66,6 +64,8 @@
         </tr>
       </table>
       <input type="text" id="inputBox" style="display: none" />
+      <br>
+      <b-alert :show=inErrorState variant="danger"><p>{{ errorMessage }}</p></b-alert>
     </div>
   </div>
 </template>
@@ -115,8 +115,9 @@ export default class TreeFaker extends Vue {
   }
   get exportDisabled() {
     return (
-      (this.$store as any).state.creasesGraph === undefined ||
-      (this.$store as any).state.creasesGraph.state !== CreasesGraphState.FullyAssigned
+      //(this.$store as any).state.creasesGraph === undefined ||
+      //(this.$store as any).state.creasesGraph.state !== CreasesGraphState.FullyAssigned
+      false
     );
   }
   get inErrorState() {
