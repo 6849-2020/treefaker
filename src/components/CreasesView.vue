@@ -33,7 +33,14 @@ import {
   crossingSwordsTree,
   crossingSwordsPacking,
   pseudohingeElevationBugTree,
-  pseudohingeElevationBugPacking
+  pseudohingeElevationBugPacking,
+  decode,
+  decodedTestTree,
+  decodedTestPacking,
+  decodedNotADagErrorTree,
+  decodedNotADagErrorPacking,
+  decodedWhereDoFlapsGoTree,
+  decodedWhereDoFlapsGoPacking
 } from "../../tests/helper";
 
 function getColor(e: Crease, useMV: boolean): string {
@@ -79,7 +86,7 @@ export default class CreasesView extends Vue {
   mounted() {
     const creasesBoard = JSXGraph.initBoard("creasesViewBox", {
       boundingbox: [-0.1, 1.1, 1.1, -0.1],
-      showCopyright: false,
+      showCopyright: false
       //showNavigation: false
     });
     creasesBoard.create("grid", []);
@@ -91,7 +98,7 @@ export default class CreasesView extends Vue {
     const paramShowFacetOrder = true; // Overlay ROG in pink.
     const paramShowMVAssignmentOnly = true; // Color all creases as red or blue.
     const paramDisplayInternalNodes = true; // Show labels of branch nodes.
-  
+
     if ((this.$store.state as any).packingCreasesSynced === true) {
       return; // No need to update.
     }
@@ -99,30 +106,44 @@ export default class CreasesView extends Vue {
     this.$store.commit("clearGlobalError");
     const creasesBoard = JSXGraph.initBoard("creasesViewBox", {
       boundingbox: [-0.1, 1.1, 1.1, -0.1],
-      showCopyright: false,
+      showCopyright: false
       //showNavigation: false
     });
     creasesBoard.create("grid", []);
-    
+
     const treeGraph = (this.$store.state as any).treeGraph as TreeGraph;
     const creasesGraph = (this.$store.state as any)
       .creasesGraph as CreasesGraph;
     const distances = treeGraph.getDistances();
-    const discreteDepth = treeGraph.dangle(creasesGraph.findAGoodRoot(distances));
+    const rootId = creasesGraph.findAGoodRoot(distances);
+    const discreteDepth = treeGraph.dangle(rootId);
     const packing = (this.$store.state as any).packing as Packing;
-    
+    console.log(decode(treeGraph, packing, creasesGraph, rootId));
+
     /*/ Replace the lines above with these to visualize a hard-coded test case; also need to change exportDisabled in TreeFaker.vue if you want to be able to open in Origami Simulator.
-    const treeGraph = crossingSwordsTree();
-    const packing = crossingSwordsPacking();
+    const treeGraph = decodedWhereDoFlapsGoTree();
+    const packing = decodedWhereDoFlapsGoPacking();
     const distances = treeGraph.getDistances();
-    const discreteDepth = treeGraph.dangle();
     const creasesGraph = cleanPacking(packing, distances);
-    buildFaces(creasesGraph);*/
+    const discreteDepth = treeGraph.dangle(creasesGraph.findAGoodRoot(distances));
+    const errorMessage = buildFaces(creasesGraph);
+    if (errorMessage != null) {
+      this.$store.commit(
+        "updateGlobalError",
+        "Debug buildFaces error. (" + errorMessage + ")"
+      );
+      return;
+    }*/
 
     // TODO (@pjrule): the UMA mutates objects in place, so we
     // should make deep copies here to avoid inadvertently mutating global state.
     try {
-      generateMolecules(creasesGraph, distances, packing.scaleFactor, discreteDepth);
+      generateMolecules(
+        creasesGraph,
+        distances,
+        packing.scaleFactor,
+        discreteDepth
+      );
     } catch (err) {
       this.$store.commit(
         "updateGlobalError",
@@ -142,12 +163,12 @@ export default class CreasesView extends Vue {
     for (const v of creasesGraph.nodes.values()) {
       const vertexName =
         !paramDisplayInternalNodes && v.id.charAt(0) == "i" ? "" : v.displayId; // TODO Change to v.id for debugging, then change back to v.displayId when done.
-      if (v.id == v.displayId) { // leaf node
+      if (v.id == v.displayId) { // Leaf node.
         const point = creasesBoard.create("point", [v.x, v.y], {
           name: vertexName,
           fixed: true,
           highlight: false,
-          label: {offset: [6, 6], highlight: false}
+          label: { offset: [6, 6], highlight: false }
         });
         points.set(v, point);
       } else {
@@ -156,7 +177,7 @@ export default class CreasesView extends Vue {
           fixed: true,
           size: 0,
           highlight: false,
-          label: {offset: [0, 0], highlight: false}
+          label: { offset: [0, 0], highlight: false }
         });
         points.set(v, point);
       }
@@ -173,29 +194,39 @@ export default class CreasesView extends Vue {
         highlight: false
       });
     }
-    
+
     // Visualize facet order.
     if (paramShowFacetOrder) {
-      const faces = Array.from(creasesGraph.faces).sort((f1, f2) => f1.facetOrderIndex - f2.facetOrderIndex);
+      const faces = Array.from(creasesGraph.faces).sort(
+        (f1, f2) => f1.facetOrderIndex - f2.facetOrderIndex
+      );
       faces.shift();
       let p1: any = null;
       for (const face of faces) {
         if (face.facetOrderIndex >= 0) {
           if (p1 == null) {
-            p1 = creasesBoard.create("point", [face.averageX(), face.averageY()], {
-              name: "",
-              strokeColor: "#ff00e6",
-              fillColor: "#ff00e6",
-              fixed: true,
-              highlight: false
-            });
+            p1 = creasesBoard.create(
+              "point",
+              [face.averageX(), face.averageY()],
+              {
+                name: "",
+                strokeColor: "#ff00e6",
+                fillColor: "#ff00e6",
+                fixed: true,
+                highlight: false
+              }
+            );
           } else {
-            const p2 = creasesBoard.create("point", [face.averageX(), face.averageY()], {
-              name: "",
-              fixed: true,
-              size: 0,
-              highlight: false
-            });
+            const p2 = creasesBoard.create(
+              "point",
+              [face.averageX(), face.averageY()],
+              {
+                name: "",
+                fixed: true,
+                size: 0,
+                highlight: false
+              }
+            );
             creasesBoard.create("segment", [p1, p2], {
               strokeColor: "#ff00e6",
               strokeWidth: 1,
@@ -214,7 +245,7 @@ export default class CreasesView extends Vue {
         }
       }
     }
-    
+
     this.creasesBoard = creasesBoard;
     this.fold = generateFold(creasesGraph);
     this.$store.commit("sync");

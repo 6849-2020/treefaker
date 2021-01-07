@@ -118,7 +118,13 @@ class CreasesNode extends PackingNode {
   goUpRidge: CreasesNode | null;
   readonly elevation: number;
 
-  constructor(id: string, displayId: string, x: number, y: number, elevation: number) {
+  constructor(
+    id: string,
+    displayId: string,
+    x: number,
+    y: number,
+    elevation: number
+  ) {
     super(id, x, y);
     this.displayId = displayId;
     this.faces = [];
@@ -173,7 +179,7 @@ class Crease extends Edge {
       this.assignment = MVAssignment.Unknown;
     }
   }
-  
+
   getOtherFace(f: Face): Face {
     if (f == this.leftFace) {
       return this.rightFace as Face;
@@ -183,12 +189,19 @@ class Crease extends Edge {
       throw new Error("Face not adjacent to edge.");
     }
   }
-  
+
   sumElevations() {
-    return (this.from as CreasesNode).elevation + (this.to as CreasesNode).elevation;
+    return (
+      (this.from as CreasesNode).elevation + (this.to as CreasesNode).elevation
+    );
   }
 
-  constructor(to: CreasesNode, from: CreasesNode, creaseType: CreaseType, baseFace: Face | null) {
+  constructor(
+    to: CreasesNode,
+    from: CreasesNode,
+    creaseType: CreaseType,
+    baseFace: Face | null
+  ) {
     super(to, from);
     this.baseFace = baseFace;
     this.leftFace = null;
@@ -207,7 +220,7 @@ class Face {
   readonly nodes: CreasesNode[];
   inactiveHullCrease: Crease | null;
   crossRidge: Face | null; // The face on the other side of the highest elevation ridge.
-  crossGussetOrPseudohinge: Face | null; // May be null if on boundary of active polyton, indicating end of corridor. 
+  crossGussetOrPseudohinge: Face | null; // May be null if on boundary of active polyton, indicating end of corridor.
   crossAxialOrHull: Face | null; // Will be non-null if and only if the face is an axial facet.
   hasPseudohinge: boolean;
   extendedHasPseudohinge: boolean; // Whether there is a path crossing only unfolded creases to a pseudohinge facet.
@@ -220,23 +233,23 @@ class Face {
   coloring: boolean;
   baseFaceLocalRoot: Face | string; // A pointer to the face representing the original active polygon or the local root id.
   //isAMoleculeSource: boolean; // Whether the face is to the right of a local root hinge.
-  moleculeSource : Face | null; // The axial facet from which the MOG starts.
+  moleculeSource: Face | null; // The axial facet from which the MOG starts.
   [key: string]: any;
-  
+
   averageX(): number {
     let total = 0;
     for (const n of this.nodes) {
       total += n.x;
     }
-    return total/this.nodes.length;
+    return total / this.nodes.length;
   }
-  
+
   averageY(): number {
     let total = 0;
     for (const n of this.nodes) {
       total += n.y;
     }
-    return total/this.nodes.length;
+    return total / this.nodes.length;
   }
 
   constructor() {
@@ -279,31 +292,30 @@ class FacetOrderingGraph {
 
   addEdge(face1: Face, face2: Face) {
     if (!this.faces.has(face1)) {
-      throw new Error(`First face ${face1.nodes.map(n => n.id)} not in FacetOrderingGraph.`);
+      throw new Error(
+        `First face ${face1.nodes.map(n => n.id)} not in FacetOrderingGraph.`
+      );
     }
     if (!this.faces.has(face2)) {
-      throw new Error(`Second face ${face2.nodes.map(n => n.id)} not in FacetOrderingGraph.`);
+      throw new Error(
+        `Second face ${face2.nodes.map(n => n.id)} not in FacetOrderingGraph.`
+      );
     }
     const adjList = this.adj.get(face1) as Face[];
     adjList.push(face2);
   }
-  
+
   // Using topological sort algorithm cut-and-pasted from:
   // https://www.tutorialspoint.com/Topological-sorting-using-Javascript-DFS
-  topologicalSortHelper(face: Face, explored: Set<Face>, justExplored: Set<Face>, s: Face[]) {
+  topologicalSortHelper(face: Face, explored: Set<Face>, s: Face[]) {
     explored.add(face);
-    if (justExplored.has(face)) {
-      console.log(justExplored);
-      throw new Error(`Facet ordering graph is not a DAG: cycle involving face ${face.nodes.map(n => n.id)}.`);
-    } else {
-      justExplored.add(face);
-    }
+
     // Marks this node as visited and goes on to the nodes
     // that are dependent on this node, the edge is node ----> n
     const adjList = this.adj.get(face) as Face[];
     adjList.forEach(f => {
       if (!explored.has(f)) {
-        this.topologicalSortHelper(f, explored, justExplored, s);
+        this.topologicalSortHelper(f, explored, s);
       }
     });
     // All dependencies are resolved for this node, we can now add
@@ -319,9 +331,24 @@ class FacetOrderingGraph {
     // For every unvisited node in our graph, call the helper.
     this.faces.forEach(face => {
       if (!explored.has(face)) {
-        this.topologicalSortHelper(face, explored, new Set(), s);
+        this.topologicalSortHelper(face, explored, s);
       }
     });
+
+    // Verify all edges go the proper direction.
+    const encounteredFaces: Set<Face> = new Set();
+    for (const face of s) {
+      for (const adjacentFace of this.adj.get(face) as Face[]) {
+        if (!encounteredFaces.has(adjacentFace)) {
+          throw new Error(
+            `Facet ordering graph is not a DAG: cycle involving faces ${face.nodes.map(
+              n => n.id
+            )} and ${adjacentFace.nodes.map(n => n.id)}.`
+          );
+        }
+      }
+      encounteredFaces.add(face);
+    }
 
     return s.reverse();
   }
@@ -427,7 +454,9 @@ class Graph<N extends Node, E extends Edge> {
 }
 
 class TreeGraph extends Graph<TreeNode, TreeEdge> {
-  // Returns d such that, for all leaf nodes a and b, d.get(a).get(b).get(c) is the tree distance from a to c on the path to b.
+  debugOverrideRootId: string | undefined;
+
+  // Returns d such that, for all leaf nodes a and b, d.get(a).get(b) is a sorted list of ids and distances along the path from a to b.
   getDistances(): Map<string, Map<string, Array<[string, number]>>> {
     const d = new Map();
     for (const fromNodeId of this.nodes.keys()) {
@@ -474,11 +503,14 @@ class TreeGraph extends Graph<TreeNode, TreeEdge> {
       }
     }
   }
-  
-  // Compute discrete depths using highest y-coordinate internal node as global root.
+
+  // Compute discrete depths from a given root.
+  // If rootId is unset, choose the highest y-coordinate branch node as the root.
   dangle(rootId: string) {
     let root: TreeNode | null = null;
-    if (rootId == "unset") {
+    if (this.debugOverrideRootId != undefined) {
+      root = this.nodes.get(this.debugOverrideRootId) as TreeNode;
+    } else if (rootId == "unset") {
       for (const n of this.nodes.values()) {
         if (n.edges.length >= 2 && (root == null || root.y < n.y)) {
           root = n;
@@ -488,7 +520,7 @@ class TreeGraph extends Graph<TreeNode, TreeEdge> {
       root = this.nodes.get(rootId) as TreeNode;
     }
     if (root == null) {
-      throw new Error("Tree has no non-leaf nodes.")
+      throw new Error("Tree has no non-leaf nodes.");
     } else {
       const discreteDepth: Map<string, number> = new Map();
       discreteDepth.set("unset", 1000);
@@ -496,8 +528,12 @@ class TreeGraph extends Graph<TreeNode, TreeEdge> {
       return discreteDepth;
     }
   }
-  
-  dangleRecursive(discreteDepth: Map<string, number>, n: TreeNode, depth: number) {
+
+  dangleRecursive(
+    discreteDepth: Map<string, number>,
+    n: TreeNode,
+    depth: number
+  ) {
     if (!discreteDepth.has(n.id)) {
       discreteDepth.set(n.id, depth);
       for (const incidentEdge of n.edges) {
@@ -550,7 +586,13 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
   }
 
   // Splits a crease into two pieces, returning the node inserted in the middle. Does not check that x and y are actually coordinates of a point in the middle of the crease e.
-  subdivideCrease(e: Crease, x: number, y: number, displayId: string, elevation: number) {
+  subdivideCrease(
+    e: Crease,
+    x: number,
+    y: number,
+    displayId: string,
+    elevation: number
+  ) {
     if (this.state != CreasesGraphState.PreUMA) {
       throw new Error(`Do not call subdivideCrease from state ${this.state}.`);
     }
@@ -564,7 +606,13 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
     const baseFace = e.baseFace;
 
     this.removeEdge(e);
-    const newNode = new CreasesNode(this.nextInternalId(), displayId, x, y, elevation);
+    const newNode = new CreasesNode(
+      this.nextInternalId(),
+      displayId,
+      x,
+      y,
+      elevation
+    );
     this.addNode(newNode);
     const firstCrease = new Crease(newNode, fromNode, creaseType, baseFace);
     this.addEdge(firstCrease);
@@ -593,7 +641,9 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
   suppressNodeIfRedundant(v2: CreasesNode, newCreases: Set<Crease>) {
     if (this.state != CreasesGraphState.PreUMA) {
       throw new Error(
-        `Do not call suppressRidgeNodeIfRedundant from state ${CreasesGraphState[this.state]}.`
+        `Do not call suppressRidgeNodeIfRedundant from state ${
+          CreasesGraphState[this.state]
+        }.`
       );
     }
     if (v2.edges.length == 2) {
@@ -621,7 +671,10 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
         this.removeEdge(e1);
         this.removeEdge(e3);
         this.nodes.delete(v2.id);
-        const newCrease = v1.elevation < v3.elevation ? new Crease(v3, v1, creaseType, baseFace) : new Crease(v1, v3, creaseType, baseFace);
+        const newCrease =
+          v1.elevation < v3.elevation
+            ? new Crease(v3, v1, creaseType, baseFace)
+            : new Crease(v1, v3, creaseType, baseFace);
         newCreases.add(newCrease);
         this.addEdge(newCrease);
         return true;
@@ -634,7 +687,9 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
   fillInFaceToTheLeft(vStart: CreasesNode, eStart: Crease) {
     if (this.state != CreasesGraphState.PostUMA) {
       throw new Error(
-        `Do not call fillInFaceToTheLeft from state ${CreasesGraphState[this.state]}.`
+        `Do not call fillInFaceToTheLeft from state ${
+          CreasesGraphState[this.state]
+        }.`
       );
     }
     const face = new Face();
@@ -649,7 +704,10 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
       } else {
         e.rightFace = face;
       }
-      const foundBoundaryOfPolygon = e.creaseType == CreaseType.Axial || e.creaseType == CreaseType.ActiveHull || e.creaseType == CreaseType.InactiveHull;
+      const foundBoundaryOfPolygon =
+        e.creaseType == CreaseType.Axial ||
+        e.creaseType == CreaseType.ActiveHull ||
+        e.creaseType == CreaseType.InactiveHull;
       if (e.creaseType == CreaseType.Pseudohinge) {
         face.hasPseudohinge = true;
       } else if (e.creaseType == CreaseType.InactiveHull) {
@@ -678,12 +736,14 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
       "Caught in infinite loop while filling in new face in UMA."
     );
   }
-  
+
   // Sets crossRidge, crossGussetOrPseudohinge, crossHinge, and flap fields, returning set of axial facets.
   annotateFaceData(face: Face) {
     if (this.state != CreasesGraphState.PostUMA) {
       throw new Error(
-        `Do not call annotateFaceData from state ${CreasesGraphState[this.state]}.`
+        `Do not call annotateFaceData from state ${
+          CreasesGraphState[this.state]
+        }.`
       );
     }
     let highestSumElevations = 0;
@@ -696,7 +756,8 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
       if (e.creaseType == CreaseType.Ridge) {
         const newSumElevations = e.sumElevations();
         const otherFace = e.getOtherFace(face) as Face;
-        if (otherFace.hasPseudohinge) { // Ensure otherFace is crossRidge face.
+        if (otherFace.hasPseudohinge) {
+          // Ensure otherFace is crossRidge face.
           highestSumElevations = 2;
           face.crossRidge = otherFace;
         } else if (newSumElevations > highestSumElevations) {
@@ -711,7 +772,11 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
           face.crossGussetOrPseudohinge = e.getOtherFace(face);
         } else {
           console.log(e);
-          throw new Error(`Found two gusset/pseudohinge creases on one face, second is ${e.idString()}, which has type ${CreaseType[e.creaseType]}.`);
+          throw new Error(
+            `Found two gusset/pseudohinge creases on one face, second is ${e.idString()}, which has type ${
+              CreaseType[e.creaseType]
+            }.`
+          );
         }
       } else if (e.creaseType == CreaseType.Hinge) {
         //face.crossHinge = e.getOtherFace(face);
@@ -721,7 +786,11 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
           face.corridor = [face];
         } else {
           console.log(e);
-          throw new Error(`Found two axial/hull creases on one face, second is ${e.idString()}, which has type ${CreaseType[e.creaseType]}.`);
+          throw new Error(
+            `Found two axial/hull creases on one face, second is ${e.idString()}, which has type ${
+              CreaseType[e.creaseType]
+            }.`
+          );
         }
       }
       v1 = v2;
@@ -736,7 +805,7 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
         `Do not call rebuildFaces from state ${CreasesGraphState[this.state]}.`
       );
     }
-    
+
     // Fill in all faces except theOuterFace.
     const oldFaces = this.faces;
     oldFaces.delete(theOuterFace);
@@ -755,7 +824,7 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
         `Euler characteristic check failed after building faces: v=${this.nodes.size}, e=${this.edges.size}, f=${this.faces.size}`
       );
     }
-    
+
     // Set all face pointers and get list of axial facets.
     const axialNonPseudohingeFacets: Set<Face> = new Set();
     for (const face of this.faces) {
@@ -765,7 +834,7 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
         }
       }
     }
-    
+
     // Build corridors from each axial facet and set flaps as union.
     for (let numIterations1 = 0; numIterations1 < 500; numIterations1++) {
       if (axialNonPseudohingeFacets.size == 0) {
@@ -777,15 +846,23 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
         const corridor = face.corridor as Face[];
         const flap: Set<string> = new Set(face.flap);
         for (let numIterations2 = 0; numIterations2 < 100; numIterations2++) {
-          const nextFace = numIterations2 % 2 == 0 ? face.crossRidge : face.crossGussetOrPseudohinge;
-          if (nextFace == null) { // Done building corridor.
+          const nextFace =
+            numIterations2 % 2 == 0
+              ? face.crossRidge
+              : face.crossGussetOrPseudohinge;
+          if (nextFace == null) {
+            // Done building corridor.
             const didDeleteEndpoint = axialNonPseudohingeFacets.delete(face);
             if (!didDeleteEndpoint) {
               console.log(corridor);
-              throw new Error(`Corridor ${corridor.map(f => "[" + f.nodes.map(n => n.id) + "]")} ended somewhere that wasn't in list of axial facets.`);
+              throw new Error(
+                `Corridor ${corridor.map(
+                  f => "[" + f.nodes.map(n => n.id) + "]"
+                )} ended somewhere that wasn't in list of axial facets.`
+              );
             }
             face.corridor = Array.from(corridor).reverse();
-            
+
             // Reset flaps with all ids encountered in corridor.
             if (flap.size != 2) {
               console.log(face);
@@ -805,18 +882,27 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
           }
         }
         if (corridorHasNotTerminated) {
-          throw new Error("Caught in infinite loop while building corridors (2).");
+          throw new Error(
+            "Caught in infinite loop while building corridors (2)."
+          );
         }
       }
     }
     throw new Error("Caught in infinite loop while building corridors (1).");
   }
-  
+
+  // Returns the id of a branch node that hopefully wont cause MOG merge problems.
+  // If there are no axial paths, returns "unset".
   findAGoodRoot(d: Map<string, Map<string, Array<[string, number]>>>): string {
     const occurrences: Map<string, number> = new Map();
     for (const axialCrease of this.edges.values()) {
       if (axialCrease.creaseType == CreaseType.Axial) {
-        const internalNodes = Array.from((d.get(axialCrease.from.id) as Map<string, Array<[string, number]>>).get(axialCrease.to.id) as Array<[string, number]>);
+        const internalNodes = Array.from(
+          (d.get(axialCrease.from.id) as Map<
+            string,
+            Array<[string, number]>
+          >).get(axialCrease.to.id) as Array<[string, number]>
+        );
         internalNodes.pop();
         for (const [nodeId, distance] of internalNodes) {
           if (occurrences.has(nodeId)) {
@@ -827,7 +913,7 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
         }
       }
     }
-    
+
     let rootId = "unset";
     let maxNumOccurrences = 0;
     for (const [nodeId, numOccurrences] of occurrences) {

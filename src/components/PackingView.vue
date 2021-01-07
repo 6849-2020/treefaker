@@ -166,10 +166,10 @@ export default class PackingView extends Vue {
           showNavigation: false
         });
         packingBoard.create("grid", []);
-        creasesGraph.nodes.forEach(function(v, idx) {
+        creasesGraph.nodes.forEach(function(v) {
           const center = packingBoard.create("point", [v.x, v.y], {
             name: v.id,
-            label: {offset: [6, 6], highlight: false},
+            label: { offset: [6, 6], highlight: false },
             highlight: false,
             fixed: true
           });

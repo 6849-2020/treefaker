@@ -879,7 +879,12 @@ export function buildMoleculeRecursive(
       g.addNode(insetNode);
     }
     boundaryNode.goUpRidge = insetNode;
-    const newCrease = new Crease(insetNode, boundaryNode, CreaseType.Ridge, baseFace);
+    const newCrease = new Crease(
+      insetNode,
+      boundaryNode,
+      CreaseType.Ridge,
+      baseFace
+    );
     otherRidgeNodes.set(newCrease, []);
     newCreases.add(newCrease);
     g.addEdge(newCrease);
@@ -893,7 +898,7 @@ export function buildMoleculeRecursive(
   if (insetNodes.length == 2) {
     [finalRidgeCreaseNode1, finalRidgeCreaseNode2] = insetNodes;
   }
-  
+
   for (let i = 0; i < nn; i++) {
     for (let j = i + 1; j < nn; j++) {
       let chopOffFromJ = h * mr[j];
@@ -1141,7 +1146,12 @@ export function buildMoleculeRecursive(
       for (const nextNode of nodesAlongRidge
         .map(x => x[1] as CreasesNode)
         .concat(ridgeCrease.to as CreasesNode)) {
-        const newCrease = new Crease(lastNode, nextNode, CreaseType.Ridge, baseFace);
+        const newCrease = new Crease(
+          lastNode,
+          nextNode,
+          CreaseType.Ridge,
+          baseFace
+        );
         newCreases.add(newCrease);
         g.addEdge(newCrease);
         lastNode = nextNode;
@@ -1262,7 +1272,14 @@ export function buildMoleculeRecursive(
           activePathStartIndex = activePathEndIndex;
         }
         //console.log(`Making recursive call on ${newBoundary.map(n => n.id)}.`);
-        buildMoleculeRecursive(g, baseFace, newBoundary, z, newCreases, newElevation);
+        buildMoleculeRecursive(
+          g,
+          baseFace,
+          newBoundary,
+          z,
+          newCreases,
+          newElevation
+        );
       }
     }
     throw new Error(
@@ -1326,19 +1343,28 @@ export function subdivideCreasesInitial(
             const newDepth = discreteDepth.get(internalNodeId);
             if (newDepth == undefined) {
               console.log(discreteDepth);
-              throw new Error(`Undefined (${newDepth}) new discrete depth for local root '${internalNodeId}'.`);
+              throw new Error(
+                `Undefined (${newDepth}) new discrete depth for local root '${internalNodeId}'.`
+              );
             }
-            for (const baseFace of ([crease.leftFace, crease.rightFace] as Face[])) {
-              const oldDepth = discreteDepth.get(baseFace.baseFaceLocalRoot as string);
+            for (const baseFace of [
+              crease.leftFace,
+              crease.rightFace
+            ] as Face[]) {
+              const oldDepth = discreteDepth.get(
+                baseFace.baseFaceLocalRoot as string
+              );
               if (oldDepth == undefined) {
                 console.log(discreteDepth);
-                throw new Error(`Undefined prior discrete depth for local root '${baseFace.baseFaceLocalRoot}'.`);
+                throw new Error(
+                  `Undefined prior discrete depth for local root '${baseFace.baseFaceLocalRoot}'.`
+                );
               }
               if (newDepth < oldDepth) {
                 baseFace.baseFaceLocalRoot = internalNodeId;
               }
             }
-            
+
             const fractionOver = distanceToInternalNode / totalDistance;
             const creaseFrom = crease.from;
             const creaseTo = crease.to;
@@ -1412,7 +1438,12 @@ export function generateMolecules(
   }
 
   // Build molecules recursively.
-  const [z, inactiveHullCreases] = subdivideCreasesInitial(g, d, scaleFactor, discreteDepth);
+  const [z, inactiveHullCreases] = subdivideCreasesInitial(
+    g,
+    d,
+    scaleFactor,
+    discreteDepth
+  );
   const newCreases: Set<Crease> = new Set();
   for (const [baseFace, boundary] of boundaries) {
     buildMoleculeRecursive(g, baseFace, boundary, z, newCreases, 0);
@@ -1493,4 +1524,3 @@ export function generateMolecules(
   g.state = CreasesGraphState.PreFacetOrdering;
   return discreteDepth;
 }
-
