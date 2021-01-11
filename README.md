@@ -2,7 +2,7 @@
 
 View online at: <a href="https://6849-2020.github.io/treefaker/index.html">6849-2020.github.io/treefaker</a><br/>
 
-<img src="assets/ReadmeScreenshot.png"/>
+<img src="public/ReadmeScreenshot.png"/>
 
 **Authors**: Parker Rule (@pjrule), Jamie Tucker-Foltz (@jtuckerfoltz)
 
