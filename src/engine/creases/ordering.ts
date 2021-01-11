@@ -137,13 +137,8 @@ function isValidMOGMergePoint(axialFacet1: Face) {
       }, but hinge ${hinge2.idString()} has displayId ${hinge2.from.displayId}`
     );
   }
-  const baseFace1 = axialFacet1.baseFaceLocalRoot as Face;
   const baseFace2 = axialFacet2.baseFaceLocalRoot as Face;
-  return (
-    // TODO Talk to RL about why this line must be commented.
-    //baseFace1.baseFaceLocalRoot == hingeNodeId ||
-    baseFace2.baseFaceLocalRoot == hingeNodeId
-  );
+  return baseFace2.baseFaceLocalRoot == hingeNodeId;
 }
 
 // Sets hinge creases to be unfolded if discrete depth difference is 2.
@@ -289,11 +284,13 @@ function launchPseudohingeCorridors(
     const corridor = currentFace.corridor as Face[];
     const nextFaceInCorridor = corridor[1] as Face;
     if (orderingGraph.faces.has(nextFaceInCorridor)) {
+      /* Turns out this can actually happen and it's not an error see decodedBadCorridorAfterPseudohinge.
       throw new Error(
         `Already encountered corridor chain going the other direction from face ${currentFace.nodes.map(
           n => n.id
         )}, but attempted to launch a new corridor after crossing a pseudohinge.`
-      );
+      );*/
+      continue;
     }
     const numVerticesInCorridor = corridor.length;
     //console.log(`Found corridor (after crossing pseudohinge) of length ${numVerticesInCorridor}:`);
@@ -461,7 +458,13 @@ export function orderFacets(
   //console.log(`Building ROG starting from ${initialFace.nodes.map(n => n.id)}.`);
   const orderingGraph = new FacetOrderingGraph();
   const visitedMolecules: Set<Face> = new Set();
-  buildROGRecursive(orderingGraph, visitedMolecules, initialBaseFace, null, initialFace);
+  buildROGRecursive(
+    orderingGraph,
+    visitedMolecules,
+    initialBaseFace,
+    null,
+    initialFace
+  );
 
   // Sort ROG and set facet order indices for each face.
   let facetOrderIndex = 0;
