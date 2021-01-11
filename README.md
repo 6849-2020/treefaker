@@ -46,4 +46,4 @@ We stand on the shoulders of giants. Particularly:
 * Some parts of the disk packing and universal molecule modules are based heavily on Lang's TreeMaker 5 implementation. Citations are included within individual files.
 * We use some CSS styles from [Origami Simulator](https://origamisimulator.org/).
 * We use a GitHub deploy script [from Roland Doda](https://dev.to/rolanddoda/deploy-to-github-pages-like-a-pro-with-github-actions-4hdg).
-* The GUI is built with JSXGraph [Origami Simulator](https://jsxgraph.uni-bayreuth.de/wp/index.html).
+* The GUI is built with [JSXGraph](https://jsxgraph.uni-bayreuth.de/wp/index.html).
