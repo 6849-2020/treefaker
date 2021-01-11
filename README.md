@@ -1,12 +1,17 @@
 # TreeFaker
 
+View online at: <a href="https://6849-2020.github.io/treefaker/index.html">6849-2020.github.io/treefaker</a><br/>
+
+<img src="assets/ReadmeScreenshot.png"/>
+
 **Authors**: Parker Rule (@pjrule), Jamie Tucker-Foltz (@jtuckerfoltz)
 
 **Contributors**: Andy Tockman (@tckmn)
 
 This MIT 6.849 final project is a lightweight web-based implementation of Robert J. Lang's [TreeMaker](https://langorigami.com/article/treemaker/) software for origami design.
-## Running
-[A live version of this project is available on GitHub Pages.](https://6849-2020.github.io/treefaker/index.html) This project uses Node.js and Vue.js; to run locally, ensure that you have a recent version of Node.js (≥v10.16.3) and NPM (≥6.9.0) installed.
+## Running locally
+
+This project uses Node.js and Vue.js; to run locally, ensure that you have a recent version of Node.js (≥v10.16.3) and NPM (≥6.9.0) installed.
 
 ### Project setup
 ```
