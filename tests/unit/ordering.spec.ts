@@ -50,7 +50,11 @@ import {
   decodedNotADagErrorTree,
   decodedNotADagErrorPacking,
   decodedMogMergeBug2Tree,
-  decodedMogMergeBug2Packing
+  decodedMogMergeBug2Packing,
+  mogMergeBugSimpleTree,
+  mogMergeBugSimplePacking,
+  decodedBadCorridorAfterPseudohingeTree,
+  decodedBadCorridorAfterPseudohingePacking
 } from "../helper";
 
 function getCorridor(g, v1, v2) {
@@ -306,7 +310,33 @@ describe("orderFacets", function() {
     orderFacets(g, discreteDepth);
   });
 
-  /* TODO Uncomment once we've figured out how to merge on outside. it("does not throw error on instance where MOGs can't be internally merged", function() {
+  it("does not throw error on instance with a separate corridor between two pseudohinge facets", function() {
+    const tree = decodedBadCorridorAfterPseudohingeTree();
+    const p = decodedBadCorridorAfterPseudohingePacking();
+    const d = tree.getDistances();
+    const discreteDepth = tree.dangle("doesn't matter");
+    const g = cleanPacking(p, d);
+    expect(buildFaces(g)).to.be.null;
+    generateMolecules(g, d, p.scaleFactor, discreteDepth);
+    orderFacets(g, discreteDepth);
+  });
+  
+  
+  // TODO The following two tests fail since the outer face is twisted.
+  // Uncomment if we find a workaround (currently, twisted trees are caught at packing time).
+  
+  /*it("does not throw error on simple instance where MOGs can't be internally merged", function() {
+    const tree = mogMergeBugSimpleTree();
+    const p = mogMergeBugSimplePacking();
+    const d = tree.getDistances();
+    const discreteDepth = tree.dangle("doesn't matter");
+    const g = cleanPacking(p, d);
+    expect(buildFaces(g)).to.be.null;
+    generateMolecules(g, d, p.scaleFactor, discreteDepth);
+    orderFacets(g, discreteDepth);
+  });
+
+  it("does not throw error on complicated instance where MOGs can't be internally merged", function() {
     const tree = decodedMogMergeBug2Tree();
     const p = decodedMogMergeBug2Packing();
     const d = tree.getDistances();

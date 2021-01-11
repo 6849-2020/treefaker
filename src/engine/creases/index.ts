@@ -627,9 +627,6 @@ export function isTwisted(
     );
   }
   for (const face of g.faces) {
-    if (face.isOuterFace) {
-      continue;
-    }
     const visitedEdgeStrings: Set<string> = new Set();
     for (let faceIndex = 0; faceIndex < face.nodes.length; faceIndex++) {
       const vStart = face.nodes[faceIndex] as CreasesNode;

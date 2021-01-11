@@ -40,7 +40,13 @@ import {
   decodedNotADagErrorTree,
   decodedNotADagErrorPacking,
   decodedWhereDoFlapsGoTree,
-  decodedWhereDoFlapsGoPacking
+  decodedWhereDoFlapsGoPacking,
+  decodedMogMergeBug2Tree,
+  decodedMogMergeBug2Packing,
+  mogMergeBugSimpleTree,
+  mogMergeBugSimplePacking,
+  decodedBadCorridorAfterPseudohingeTree,
+  decodedBadCorridorAfterPseudohingePacking
 } from "../../tests/helper";
 
 function getColor(e: Crease, useMV: boolean): string {
@@ -121,8 +127,8 @@ export default class CreasesView extends Vue {
     console.log(decode(treeGraph, packing, creasesGraph, rootId));
 
     /*/ Replace the lines above with these to visualize a hard-coded test case; also need to change exportDisabled in TreeFaker.vue if you want to be able to open in Origami Simulator.
-    const treeGraph = decodedWhereDoFlapsGoTree();
-    const packing = decodedWhereDoFlapsGoPacking();
+    const treeGraph = decodedBadCorridorAfterPseudohingeTree();
+    const packing = decodedBadCorridorAfterPseudohingePacking();
     const distances = treeGraph.getDistances();
     const creasesGraph = cleanPacking(packing, distances);
     const discreteDepth = treeGraph.dangle(creasesGraph.findAGoodRoot(distances));
@@ -163,7 +169,8 @@ export default class CreasesView extends Vue {
     for (const v of creasesGraph.nodes.values()) {
       const vertexName =
         !paramDisplayInternalNodes && v.id.charAt(0) == "i" ? "" : v.displayId; // TODO Change to v.id for debugging, then change back to v.displayId when done.
-      if (v.id == v.displayId) { // Leaf node.
+      if (v.id == v.displayId) {
+        // Leaf node.
         const point = creasesBoard.create("point", [v.x, v.y], {
           name: vertexName,
           fixed: true,
