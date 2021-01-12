@@ -116,7 +116,8 @@ class CreasesNode extends PackingNode {
   faces: Face[];
   onBoundaryOfSquare: boolean;
   goUpRidge: CreasesNode | null;
-  readonly elevation: number;
+  readonly elevation: number; // Not accurately set for vertices incident to 2 hinges and 2 ridges.
+  hasPseudohinge: boolean; // Whether the node sits at the top of a pseudohinge.
 
   constructor(
     id: string,
@@ -132,6 +133,7 @@ class CreasesNode extends PackingNode {
       x < TOLERANCE || y < TOLERANCE || x > 1 - TOLERANCE || y > 1 - TOLERANCE;
     this.goUpRidge = null;
     this.elevation = elevation;
+    this.hasPseudohinge = false;
   }
 }
 
@@ -756,7 +758,7 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
       if (e.creaseType == CreaseType.Ridge) {
         const newSumElevations = e.sumElevations();
         const otherFace = e.getOtherFace(face) as Face;
-        if (otherFace.hasPseudohinge) {
+        if (otherFace.hasPseudohinge && (v1.hasPseudohinge || v2.hasPseudohinge)) {
           // Ensure otherFace is crossRidge face.
           highestSumElevations = 2;
           face.crossRidge = otherFace;
@@ -864,6 +866,7 @@ class CreasesGraph extends Graph<CreasesNode, Crease> {
             face.corridor = Array.from(corridor).reverse();
 
             // Reset flaps with all ids encountered in corridor.
+            //console.log(`Setting flap of corridor [${corridor.map(f => " " + f.nodes.map(n => n.id).toString() + " ")}] to ${Array.from(flap)}.`);
             if (flap.size != 2) {
               console.log(face);
               throw new Error(`Could not determine flap: ${Array.from(flap)}.`);

@@ -54,7 +54,9 @@ import {
   mogMergeBugSimpleTree,
   mogMergeBugSimplePacking,
   decodedBadCorridorAfterPseudohingeTree,
-  decodedBadCorridorAfterPseudohingePacking
+  decodedBadCorridorAfterPseudohingePacking,
+  decodedFlapErrorTree,
+  decodedFlapErrorPacking
 } from "../helper";
 
 function getCorridor(g, v1, v2) {
@@ -313,6 +315,17 @@ describe("orderFacets", function() {
   it("does not throw error on instance with a separate corridor between two pseudohinge facets", function() {
     const tree = decodedBadCorridorAfterPseudohingeTree();
     const p = decodedBadCorridorAfterPseudohingePacking();
+    const d = tree.getDistances();
+    const discreteDepth = tree.dangle("doesn't matter");
+    const g = cleanPacking(p, d);
+    expect(buildFaces(g)).to.be.null;
+    generateMolecules(g, d, p.scaleFactor, discreteDepth);
+    orderFacets(g, discreteDepth);
+  });
+
+  it("does not throw error on instance that generated flap error", function() {
+    const tree = decodedFlapErrorTree();
+    const p = decodedFlapErrorPacking();
     const d = tree.getDistances();
     const discreteDepth = tree.dangle("doesn't matter");
     const g = cleanPacking(p, d);

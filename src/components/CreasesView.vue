@@ -46,7 +46,11 @@ import {
   mogMergeBugSimpleTree,
   mogMergeBugSimplePacking,
   decodedBadCorridorAfterPseudohingeTree,
-  decodedBadCorridorAfterPseudohingePacking
+  decodedBadCorridorAfterPseudohingePacking,
+  treeTheoremCounterexampleTree,
+  treeTheoremCounterexamplePacking,
+  decodedFlapErrorTree,
+  decodedFlapErrorPacking
 } from "../../tests/helper";
 
 function getColor(e: Crease, useMV: boolean): string {
@@ -127,8 +131,8 @@ export default class CreasesView extends Vue {
     console.log(decode(treeGraph, packing, creasesGraph, rootId));
 
     /*/ Replace the lines above with these to visualize a hard-coded test case; also need to change exportDisabled in TreeFaker.vue if you want to be able to open in Origami Simulator.
-    const treeGraph = decodedBadCorridorAfterPseudohingeTree();
-    const packing = decodedBadCorridorAfterPseudohingePacking();
+    const treeGraph = decodedFlapErrorTree();
+    const packing = decodedFlapErrorPacking();
     const distances = treeGraph.getDistances();
     const creasesGraph = cleanPacking(packing, distances);
     const discreteDepth = treeGraph.dangle(creasesGraph.findAGoodRoot(distances));
