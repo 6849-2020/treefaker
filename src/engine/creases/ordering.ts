@@ -173,7 +173,7 @@ function assignUnfoldedHinges(
         intersectingId == "unset"
       ) {
         throw new Error(
-          `Flaps to not intersect properly at hinge ${crease.idString()}: leftFlap=${Array.from(
+          `Flaps do not intersect properly at hinge ${crease.idString()}: leftFlap=${Array.from(
             leftFlap
           )}, rightFlap=${Array.from(rightFlap)}.`
         );

@@ -1502,6 +1502,9 @@ export function generateMolecules(
             break;
           }
         }
+        if (creaseType == CreaseType.Pseudohinge) {
+          n.hasPseudohinge = true;
+        }
         const lambda = dx * (n.x - x1) + dy * (n.y - y1);
         const x = dx * lambda + x1;
         const y = dy * lambda + y1;

@@ -494,6 +494,39 @@ export function mogMergeBugSimplePacking() {
   return packing;
 }
 
+export function treeTheoremCounterexampleTree() {
+  const tree = new TreeGraph();
+  tree.debugOverrideRootId = "1";
+  const v1 = new TreeNode("1", 0, 0);
+  tree.addNode(v1);
+  const v2 = new TreeNode("2", 1, 0);
+  tree.addNode(v2);
+  const v3 = new TreeNode("3", 1, 2);
+  tree.addNode(v3);
+  const v4 = new TreeNode("4", 3, 0);
+  tree.addNode(v4);
+  const v5 = new TreeNode("5", -5, 0);
+  tree.addNode(v5);
+  const v6 = new TreeNode("6", 0, 5);
+  tree.addNode(v6);
+  tree.addEdge(new TreeEdge(v2, v1, 1));
+  tree.addEdge(new TreeEdge(v3, v2, 2));
+  tree.addEdge(new TreeEdge(v4, v2, 2));
+  tree.addEdge(new TreeEdge(v5, v1, 5));
+  tree.addEdge(new TreeEdge(v6, v1, 5));
+  return tree;
+}
+
+export function treeTheoremCounterexamplePacking() {
+  const packing = new Packing();
+  packing.scaleFactor = 1 / 8;
+  packing.nodes.set("3", new PackingNode("3", 0, 1));
+  packing.nodes.set("5", new PackingNode("5", 0, 0));
+  packing.nodes.set("4", new PackingNode("4", 1, 0));
+  packing.nodes.set("6", new PackingNode("6", 1, 1));
+  return packing;
+}
+
 export function decodedTestTree() {
   const tree = new TreeGraph();
   tree.debugOverrideRootId = "1";
@@ -802,5 +835,52 @@ export function decodedBadCorridorAfterPseudohingePacking() {
     new PackingNode("8", 0.9999999986129633, 0.8989383006929783)
   );
   packing.nodes.set("9", new PackingNode("9", 0.8803257897397259, 0));
+  return packing;
+}
+
+export function decodedFlapErrorTree() {
+  const tree = new TreeGraph();
+  tree.debugOverrideRootId = "4";
+  const v1 = new TreeNode("1", 5, 4);
+  tree.addNode(v1);
+  const v2 = new TreeNode("2", 5, 6);
+  tree.addNode(v2);
+  const v3 = new TreeNode("3", 5, 7.991071428571429);
+  tree.addNode(v3);
+  const v4 = new TreeNode("4", 5, 9.866071428571429);
+  tree.addNode(v4);
+  const v5 = new TreeNode("5", 5.5357142857142865, 9.834821428571429);
+  tree.addNode(v5);
+  const v6 = new TreeNode("6", 4.352678571428572, 9.879464285714286);
+  tree.addNode(v6);
+  const v7 = new TreeNode("7", 4.955357142857143, 10.392857142857144);
+  tree.addNode(v7);
+  const v8 = new TreeNode("8", 5.513392857142858, 3.964285714285715);
+  tree.addNode(v8);
+  const v9 = new TreeNode("9", 4.955357142857143, 3.406250000000001);
+  tree.addNode(v9);
+  const v10 = new TreeNode("10", 4.308035714285714, 3.9866071428571437);
+  tree.addNode(v10);
+  tree.addEdge(new TreeEdge(v2, v1, 2));
+  tree.addEdge(new TreeEdge(v1, v9, 2.2413076213123433));
+  tree.addEdge(new TreeEdge(v8, v1, 0.7314333376758668));
+  tree.addEdge(new TreeEdge(v1, v10, 0.9531987704627167));
+  tree.addEdge(new TreeEdge(v2, v3, 1.9910714285714288));
+  tree.addEdge(new TreeEdge(v3, v4, 1.875));
+  tree.addEdge(new TreeEdge(v4, v6, 2.0751210197251186));
+  tree.addEdge(new TreeEdge(v5, v4, 1.2556198652167678));
+  tree.addEdge(new TreeEdge(v4, v7, 0.5520475898760828));
+  return tree;
+}
+
+export function decodedFlapErrorPacking() {
+  const packing = new Packing();
+  packing.scaleFactor = 0.11243569783630102;
+  packing.nodes.set("10", new PackingNode("10", 0.9909635975273698, 0));
+  packing.nodes.set("5", new PackingNode("5", 0.606765195254479, 0.99999999958552));
+  packing.nodes.set("6", new PackingNode("6", 0.981259370964819, 0.9999999986121055));
+  packing.nodes.set("7", new PackingNode("7", 1.0975217956676886e-10, 0.9898039861901106));
+  packing.nodes.set("8", new PackingNode("8", -3.1243979625728e-10, 0.18593907781220848));
+  packing.nodes.set("9", new PackingNode("9", 0.277749007128965, 1.927828507941598e-9));
   return packing;
 }
